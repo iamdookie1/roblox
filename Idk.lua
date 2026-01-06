@@ -28,12 +28,6 @@ local dictionary = {}
 local index = {}
 local blacklist = {}
 
--- History Storage
-local typedWords = {}
-local skippedWords = {}
-local failedWords = {}
-local favoredWords = {}
-
 -- State Flags
 local isDictionaryReady = false
 local isReloading = false
@@ -179,6 +173,8 @@ local function buildDictionaryStructure(dText1, dText2, bText1, bText2)
 	processDict(TRAP_WORDS, "Finalizing")
 end
 
+local loadConfigFromFile  -- Forward declaration
+
 local function loadDictionaries()
 	if isReloading then return end
 	isReloading = true
@@ -227,6 +223,14 @@ local function loadDictionaries()
 		isDictionaryReady = true
 		isReloading = false
 		if updateStatusLabel then updateStatusLabel("Ready") end
+		
+		-- Auto-load config after dictionary is ready
+		if config and config.autoLoadConfig then
+			task.wait(0.3)
+			if loadConfigFromFile then
+				loadConfigFromFile(true)  -- Silent load
+			end
+		end
 	end)
 end
 
@@ -270,21 +274,25 @@ local config = {
 	autoTypeV2 = false,
 	autoTypeV2Min = 0.05,
 	autoTypeV2Max = 0.2,
-	autoTypeV2MoreRandom = false,
-	autoTypeV2MoreHuman = false,
-	humanPauseChance = 0.15,
-	humanPauseMultiplier = 2.0,
-	humanFlowChance = 0.10,
-	humanFlowMultiplier = 0.7,
-	humanBurstChance = 0.08,
-	humanBurstLength = 3,
-	humanBurstSpeed = 0.5,
-	humanMistakeChance = 0.03,
+	
+	-- Enhanced Human Typing Settings
+	humanTyping = false,
+	humanBaseSpeed = 0.15,
+	humanVariation = 0.10,
+	humanPauseChance = 0.12,
+	humanPauseMin = 0.3,
+	humanPauseMax = 0.8,
+	humanBurstChance = 0.15,
+	humanBurstSpeed = 0.6,
+	humanFatigue = false,
+	humanFatigueRate = 0.02,
+	
 	minWordLength = 3,
 	endingIn = "",
 	theme = "Dark",
 	transparency = 0.05,
-	acrylic = false
+	acrylic = false,
+	autoLoadConfig = false
 }
 
 local usedWords = {}
@@ -343,36 +351,13 @@ local function getSuggestion(prefix, longest, anti, used, minLen, ending)
 		m = getMatches(prefix, anti, used, minLen, "")
 	end
 	
-	local favoredMatches = {}
-	local normalMatches = {}
-	for i = 1, #m do
-		if favoredWords[m[i]] then
-			table.insert(favoredMatches, m[i])
-		else
-			table.insert(normalMatches, m[i])
-		end
-	end
-	
-	table.sort(favoredMatches, function(a,b)
+	table.sort(m, function(a,b)
 		if #a == #b then return a < b end
 		if longest then return #a > #b else return #a < #b end
 	end)
 	
-	table.sort(normalMatches, function(a,b)
-		if #a == #b then return a < b end
-		if longest then return #a > #b else return #a < #b end
-	end)
-	
-	local combined = {}
-	for i = 1, #favoredMatches do
-		table.insert(combined, favoredMatches[i])
-	end
-	for i = 1, #normalMatches do
-		table.insert(combined, normalMatches[i])
-	end
-	
-	if #combined == 0 then return "No Match", {} end
-	return combined[1], combined
+	if #m == 0 then return "No Match", {} end
+	return m[1], m
 end
 
 local function getHRP()
@@ -439,7 +424,7 @@ local function getClosestTable()
 end
 
 -- ==========================================
--- GUI CREATION (IMPROVED MODERN DESIGN)
+-- GUI CREATION (IMPROVED & SMALLER)
 -- ==========================================
 
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
@@ -448,7 +433,7 @@ gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 gui.Name = "WordHelperUI"
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 260, 0, 390)
+frame.Size = UDim2.new(0, 260, 0, 380)
 frame.Position = UDim2.new(0.72, 0, 0.12, 0)
 frame.BackgroundColor3 = themes[config.theme].primary
 frame.BackgroundTransparency = config.transparency
@@ -457,12 +442,12 @@ frame.Active = true
 frame.Draggable = true
 
 local frameCorner = Instance.new("UICorner", frame)
-frameCorner.CornerRadius = UDim.new(0, 10)
+frameCorner.CornerRadius = UDim.new(0, 14)
 
 local frameStroke = Instance.new("UIStroke", frame)
 frameStroke.Color = themes[config.theme].accent
-frameStroke.Thickness = 1
-frameStroke.Transparency = 0.5
+frameStroke.Thickness = 2
+frameStroke.Transparency = 0.3
 
 local blur = Instance.new("UIGradient", frame)
 blur.Color = ColorSequence.new{
@@ -471,8 +456,8 @@ blur.Color = ColorSequence.new{
 }
 blur.Rotation = 45
 
+-- Acrylic effect (only blurs UI, not full screen)
 local acrylicFrame
-local acrylicBlur
 if config.acrylic then
 	acrylicFrame = Instance.new("Frame", frame)
 	acrylicFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -481,11 +466,12 @@ if config.acrylic then
 	acrylicFrame.BackgroundTransparency = 0.92
 	acrylicFrame.BorderSizePixel = 0
 	acrylicFrame.ZIndex = 1
-	Instance.new("UICorner", acrylicFrame).CornerRadius = UDim.new(0, 10)
 	
-	acrylicBlur = Instance.new("BlurEffect", workspace.CurrentCamera)
-	acrylicBlur.Size = 0
-	acrylicBlur.Name = "WordHelperAcrylic"
+	local acrylicCorner = Instance.new("UICorner", acrylicFrame)
+	acrylicCorner.CornerRadius = UDim.new(0, 14)
+	
+	local acrylicBlur = Instance.new("BlurEffect", acrylicFrame)
+	acrylicBlur.Size = 8
 end
 
 local topBar = Instance.new("Frame", frame)
@@ -511,34 +497,34 @@ local function newButton(parent, text, size)
 	local stroke = Instance.new("UIStroke", b)
 	stroke.Color = themes[config.theme].accent
 	stroke.Thickness = 1
-	stroke.Transparency = 0.7
+	stroke.Transparency = 0.6
 	
 	b.MouseEnter:Connect(function()
-		TweenService:Create(b, TweenInfo.new(0.2), {BackgroundColor3 = themes[config.theme].accent}):Play()
+		TweenService:Create(b, TweenInfo.new(0.15), {BackgroundColor3 = themes[config.theme].accent}):Play()
 	end)
 	
 	b.MouseLeave:Connect(function()
-		TweenService:Create(b, TweenInfo.new(0.2), {BackgroundColor3 = themes[config.theme].secondary}):Play()
+		TweenService:Create(b, TweenInfo.new(0.15), {BackgroundColor3 = themes[config.theme].secondary}):Play()
 	end)
 	
 	return b
 end
 
 local navButtons = {}
-local navButtonNames = {"Main", "Settings", "History", "Config", "Info"}
-local buttonWidth = 0.18
+local navButtonNames = {"Main", "Settings", "Human", "Config", "Info"}
+local buttonWidth = 0.19
 
 for i, name in ipairs(navButtonNames) do
 	local btn = newButton(topBar, name)
 	btn.Size = UDim2.new(buttonWidth, 0, 1, 0)
-	btn.Position = UDim2.new((i-1) * (buttonWidth + 0.01) + 0.01, 0, 0, 0)
+	btn.Position = UDim2.new((i-1) * (buttonWidth + 0.005) + 0.005, 0, 0, 0)
 	btn.TextSize = 10
 	navButtons[name] = btn
 end
 
 local contentContainer = Instance.new("Frame", frame)
-contentContainer.Size = UDim2.new(1, 0, 1, -37)
-contentContainer.Position = UDim2.new(0, 0, 0, 37)
+contentContainer.Size = UDim2.new(1, 0, 1, -36)
+contentContainer.Position = UDim2.new(0, 0, 0, 36)
 contentContainer.BackgroundTransparency = 1
 contentContainer.ZIndex = 2
 
@@ -570,7 +556,7 @@ end
 local mainPage = createPage()
 mainPage.Visible = true
 local settingsPage = createPage()
-local historyPage = createPage()
+local humanPage = createPage()
 local configPage = createPage()
 local infoPage = createPage()
 
@@ -612,7 +598,7 @@ local function newBox(parent, text, height)
 	local stroke = Instance.new("UIStroke", b)
 	stroke.Color = themes[config.theme].accent
 	stroke.Thickness = 1
-	stroke.Transparency = 0.7
+	stroke.Transparency = 0.6
 	
 	return b
 end
@@ -621,37 +607,37 @@ end
 -- MAIN PAGE UI
 -- ==========================================
 
-local title = newLabel(mainPage, "Word Helper Pro", 14)
+local title = newLabel(mainPage, "Word Helper Pro", 15)
 title.TextXAlignment = Enum.TextXAlignment.Center
 title.TextColor3 = themes[config.theme].highlight
 
 local wordLabel = Instance.new("TextLabel", mainPage)
-wordLabel.Size = UDim2.new(1, 0, 0, 40)
+wordLabel.Size = UDim2.new(1, 0, 0, 42)
 wordLabel.BackgroundColor3 = themes[config.theme].secondary
 wordLabel.TextColor3 = themes[config.theme].highlight
 wordLabel.Font = Enum.Font.GothamBold
-wordLabel.TextSize = 16
+wordLabel.TextSize = 17
 wordLabel.Text = "Waiting..."
 wordLabel.BorderSizePixel = 0
 wordLabel.ZIndex = 2
 
 local wordCorner = Instance.new("UICorner", wordLabel)
-wordCorner.CornerRadius = UDim.new(0, 8)
+wordCorner.CornerRadius = UDim.new(0, 9)
 
 local wordStroke = Instance.new("UIStroke", wordLabel)
 wordStroke.Color = themes[config.theme].accent
 wordStroke.Thickness = 2
-wordStroke.Transparency = 0.5
+wordStroke.Transparency = 0.4
 
 updateStatusLabel = function(txt)
 	wordLabel.Text = txt
 end
 
 local nextButton = newButton(mainPage, "Next Word")
-nextButton.Size = UDim2.new(1, 0, 0, 28)
+nextButton.Size = UDim2.new(1, 0, 0, 30)
 
 local row1 = Instance.new("Frame", mainPage)
-row1.Size = UDim2.new(1, 0, 0, 28)
+row1.Size = UDim2.new(1, 0, 0, 30)
 row1.BackgroundTransparency = 1
 row1.ZIndex = 2
 local typeButton = newButton(row1, "Type")
@@ -661,7 +647,7 @@ autoTypeButton.Position = UDim2.new(0.52, 0, 0, 0)
 autoTypeButton.Size = UDim2.new(0.48, 0, 1, 0)
 
 local row2 = Instance.new("Frame", mainPage)
-row2.Size = UDim2.new(1, 0, 0, 28)
+row2.Size = UDim2.new(1, 0, 0, 30)
 row2.BackgroundTransparency = 1
 row2.ZIndex = 2
 local copyButton = newButton(row2, "Copy")
@@ -671,10 +657,10 @@ forceFindButton.Position = UDim2.new(0.52, 0, 0, 0)
 forceFindButton.Size = UDim2.new(0.48, 0, 1, 0)
 
 local row3 = Instance.new("Frame", mainPage)
-row3.Size = UDim2.new(1, 0, 0, 28)
+row3.Size = UDim2.new(1, 0, 0, 30)
 row3.BackgroundTransparency = 1
 row3.ZIndex = 2
-local longestLabel = newLabel(row3, "Longest First", 11)
+local longestLabel = newLabel(row3, "Longest First", 12)
 longestLabel.Size = UDim2.new(0.5, 0, 1, 0)
 longestLabel.TextYAlignment = Enum.TextYAlignment.Center
 local longestToggle = newButton(row3, "Off")
@@ -682,10 +668,10 @@ longestToggle.Size = UDim2.new(0.48, 0, 1, 0)
 longestToggle.Position = UDim2.new(0.52, 0, 0, 0)
 
 local autoTypeV2Row = Instance.new("Frame", mainPage)
-autoTypeV2Row.Size = UDim2.new(1, 0, 0, 28)
+autoTypeV2Row.Size = UDim2.new(1, 0, 0, 30)
 autoTypeV2Row.BackgroundTransparency = 1
 autoTypeV2Row.ZIndex = 2
-local autoTypeV2Label = newLabel(autoTypeV2Row, "Auto Type V2", 11)
+local autoTypeV2Label = newLabel(autoTypeV2Row, "Auto Type V2", 12)
 autoTypeV2Label.Size = UDim2.new(0.5, 0, 1, 0)
 autoTypeV2Label.TextYAlignment = Enum.TextYAlignment.Center
 local autoTypeV2Toggle = newButton(autoTypeV2Row, "Off")
@@ -693,139 +679,19 @@ autoTypeV2Toggle.Size = UDim2.new(0.48, 0, 1, 0)
 autoTypeV2Toggle.Position = UDim2.new(0.52, 0, 0, 0)
 
 local v2MinMaxRow = Instance.new("Frame", mainPage)
-v2MinMaxRow.Size = UDim2.new(1, 0, 0, 28)
+v2MinMaxRow.Size = UDim2.new(1, 0, 0, 30)
 v2MinMaxRow.BackgroundTransparency = 1
 v2MinMaxRow.Visible = false
 v2MinMaxRow.ZIndex = 2
-local v2mml = newLabel(v2MinMaxRow, "V2 Min/Max", 10)
-v2mml.Size = UDim2.new(0.38, 0, 1, 0)
+local v2mml = newLabel(v2MinMaxRow, "V2 Min/Max", 11)
+v2mml.Size = UDim2.new(0.36, 0, 1, 0)
 v2mml.TextYAlignment = Enum.TextYAlignment.Center
-local v2MinInput = newBox(v2MinMaxRow, tostring(config.autoTypeV2Min), 28)
-v2MinInput.Size = UDim2.new(0.28, 0, 1, 0)
-v2MinInput.Position = UDim2.new(0.40, 0, 0, 0)
-local v2MaxInput = newBox(v2MinMaxRow, tostring(config.autoTypeV2Max), 28)
-v2MaxInput.Size = UDim2.new(0.28, 0, 1, 0)
-v2MaxInput.Position = UDim2.new(0.70, 0, 0, 0)
-
-local v2MoreRandomRow = Instance.new("Frame", mainPage)
-v2MoreRandomRow.Size = UDim2.new(1, 0, 0, 28)
-v2MoreRandomRow.BackgroundTransparency = 1
-v2MoreRandomRow.Visible = false
-v2MoreRandomRow.ZIndex = 2
-local v2mrl = newLabel(v2MoreRandomRow, "More Random", 10)
-v2mrl.Size = UDim2.new(0.5, 0, 1, 0)
-v2mrl.TextYAlignment = Enum.TextYAlignment.Center
-local v2MoreRandomToggle = newButton(v2MoreRandomRow, "Off")
-v2MoreRandomToggle.Size = UDim2.new(0.48, 0, 1, 0)
-v2MoreRandomToggle.Position = UDim2.new(0.52, 0, 0, 0)
-
-local v2MoreHumanRow = Instance.new("Frame", mainPage)
-v2MoreHumanRow.Size = UDim2.new(1, 0, 0, 28)
-v2MoreHumanRow.BackgroundTransparency = 1
-v2MoreHumanRow.Visible = false
-v2MoreHumanRow.ZIndex = 2
-local v2mhl = newLabel(v2MoreHumanRow, "More Human", 10)
-v2mhl.Size = UDim2.new(0.5, 0, 1, 0)
-v2mhl.TextYAlignment = Enum.TextYAlignment.Center
-local v2MoreHumanToggle = newButton(v2MoreHumanRow, "Off")
-v2MoreHumanToggle.Size = UDim2.new(0.48, 0, 1, 0)
-v2MoreHumanToggle.Position = UDim2.new(0.52, 0, 0, 0)
-
--- Human Typing Settings Container
-local humanSettingsContainer = Instance.new("Frame", mainPage)
-humanSettingsContainer.Size = UDim2.new(1, 0, 0, 0)
-humanSettingsContainer.BackgroundTransparency = 1
-humanSettingsContainer.Visible = false
-humanSettingsContainer.ZIndex = 2
-humanSettingsContainer.AutomaticSize = Enum.AutomaticSize.Y
-
-local humanLayout = Instance.new("UIListLayout", humanSettingsContainer)
-humanLayout.SortOrder = Enum.SortOrder.LayoutOrder
-humanLayout.Padding = UDim.new(0, 5)
-
--- Pause Settings
-local humanPauseRow = Instance.new("Frame", humanSettingsContainer)
-humanPauseRow.Size = UDim2.new(1, 0, 0, 28)
-humanPauseRow.BackgroundTransparency = 1
-humanPauseRow.ZIndex = 2
-local humanPauseLabel = newLabel(humanPauseRow, "Pause %", 9)
-humanPauseLabel.Size = UDim2.new(0.3, 0, 1, 0)
-humanPauseLabel.TextYAlignment = Enum.TextYAlignment.Center
-local humanPauseInput = newBox(humanPauseRow, tostring(config.humanPauseChance * 100), 28)
-humanPauseInput.Size = UDim2.new(0.25, 0, 1, 0)
-humanPauseInput.Position = UDim2.new(0.32, 0, 0, 0)
-local humanPauseMultLabel = newLabel(humanPauseRow, "x", 9)
-humanPauseMultLabel.Size = UDim2.new(0.08, 0, 1, 0)
-humanPauseMultLabel.Position = UDim2.new(0.59, 0, 0, 0)
-humanPauseMultLabel.TextXAlignment = Enum.TextXAlignment.Center
-humanPauseMultLabel.TextYAlignment = Enum.TextYAlignment.Center
-local humanPauseMultInput = newBox(humanPauseRow, tostring(config.humanPauseMultiplier), 28)
-humanPauseMultInput.Size = UDim2.new(0.28, 0, 1, 0)
-humanPauseMultInput.Position = UDim2.new(0.69, 0, 0, 0)
-
--- Flow Settings
-local humanFlowRow = Instance.new("Frame", humanSettingsContainer)
-humanFlowRow.Size = UDim2.new(1, 0, 0, 28)
-humanFlowRow.BackgroundTransparency = 1
-humanFlowRow.ZIndex = 2
-local humanFlowLabel = newLabel(humanFlowRow, "Flow %", 9)
-humanFlowLabel.Size = UDim2.new(0.3, 0, 1, 0)
-humanFlowLabel.TextYAlignment = Enum.TextYAlignment.Center
-local humanFlowInput = newBox(humanFlowRow, tostring(config.humanFlowChance * 100), 28)
-humanFlowInput.Size = UDim2.new(0.25, 0, 1, 0)
-humanFlowInput.Position = UDim2.new(0.32, 0, 0, 0)
-local humanFlowMultLabel = newLabel(humanFlowRow, "x", 9)
-humanFlowMultLabel.Size = UDim2.new(0.08, 0, 1, 0)
-humanFlowMultLabel.Position = UDim2.new(0.59, 0, 0, 0)
-humanFlowMultLabel.TextXAlignment = Enum.TextXAlignment.Center
-humanFlowMultLabel.TextYAlignment = Enum.TextYAlignment.Center
-local humanFlowMultInput = newBox(humanFlowRow, tostring(config.humanFlowMultiplier), 28)
-humanFlowMultInput.Size = UDim2.new(0.28, 0, 1, 0)
-humanFlowMultInput.Position = UDim2.new(0.69, 0, 0, 0)
-
--- Burst Settings
-local humanBurstRow = Instance.new("Frame", humanSettingsContainer)
-humanBurstRow.Size = UDim2.new(1, 0, 0, 28)
-humanBurstRow.BackgroundTransparency = 1
-humanBurstRow.ZIndex = 2
-local humanBurstLabel = newLabel(humanBurstRow, "Burst %", 9)
-humanBurstLabel.Size = UDim2.new(0.3, 0, 1, 0)
-humanBurstLabel.TextYAlignment = Enum.TextYAlignment.Center
-local humanBurstInput = newBox(humanBurstRow, tostring(config.humanBurstChance * 100), 28)
-humanBurstInput.Size = UDim2.new(0.25, 0, 1, 0)
-humanBurstInput.Position = UDim2.new(0.32, 0, 0, 0)
-local humanBurstLenLabel = newLabel(humanBurstRow, "Len", 9)
-humanBurstLenLabel.Size = UDim2.new(0.08, 0, 1, 0)
-humanBurstLenLabel.Position = UDim2.new(0.59, 0, 0, 0)
-humanBurstLenLabel.TextXAlignment = Enum.TextXAlignment.Center
-humanBurstLenLabel.TextYAlignment = Enum.TextYAlignment.Center
-local humanBurstLenInput = newBox(humanBurstRow, tostring(config.humanBurstLength), 28)
-humanBurstLenInput.Size = UDim2.new(0.28, 0, 1, 0)
-humanBurstLenInput.Position = UDim2.new(0.69, 0, 0, 0)
-
--- Burst Speed Settings
-local humanBurstSpeedRow = Instance.new("Frame", humanSettingsContainer)
-humanBurstSpeedRow.Size = UDim2.new(1, 0, 0, 28)
-humanBurstSpeedRow.BackgroundTransparency = 1
-humanBurstSpeedRow.ZIndex = 2
-local humanBurstSpeedLabel = newLabel(humanBurstSpeedRow, "Burst Speed", 9)
-humanBurstSpeedLabel.Size = UDim2.new(0.55, 0, 1, 0)
-humanBurstSpeedLabel.TextYAlignment = Enum.TextYAlignment.Center
-local humanBurstSpeedInput = newBox(humanBurstSpeedRow, tostring(config.humanBurstSpeed), 28)
-humanBurstSpeedInput.Size = UDim2.new(0.43, 0, 1, 0)
-humanBurstSpeedInput.Position = UDim2.new(0.57, 0, 0, 0)
-
--- Mistake Settings
-local humanMistakeRow = Instance.new("Frame", humanSettingsContainer)
-humanMistakeRow.Size = UDim2.new(1, 0, 0, 28)
-humanMistakeRow.BackgroundTransparency = 1
-humanMistakeRow.ZIndex = 2
-local humanMistakeLabel = newLabel(humanMistakeRow, "Mistake %", 9)
-humanMistakeLabel.Size = UDim2.new(0.55, 0, 1, 0)
-humanMistakeLabel.TextYAlignment = Enum.TextYAlignment.Center
-local humanMistakeInput = newBox(humanMistakeRow, tostring(config.humanMistakeChance * 100), 28)
-humanMistakeInput.Size = UDim2.new(0.43, 0, 1, 0)
-humanMistakeInput.Position = UDim2.new(0.57, 0, 0, 0)
+local v2MinInput = newBox(v2MinMaxRow, tostring(config.autoTypeV2Min), 30)
+v2MinInput.Size = UDim2.new(0.29, 0, 1, 0)
+v2MinInput.Position = UDim2.new(0.38, 0, 0, 0)
+local v2MaxInput = newBox(v2MinMaxRow, tostring(config.autoTypeV2Max), 30)
+v2MaxInput.Size = UDim2.new(0.29, 0, 1, 0)
+v2MaxInput.Position = UDim2.new(0.69, 0, 0, 0)
 
 -- ==========================================
 -- SETTINGS PAGE UI
@@ -833,17 +699,17 @@ humanMistakeInput.Position = UDim2.new(0.57, 0, 0, 0)
 
 local function createSettingRow(parent, name, inputObj)
 	local f = Instance.new("Frame", parent)
-	f.Size = UDim2.new(1, 0, 0, 28)
+	f.Size = UDim2.new(1, 0, 0, 30)
 	f.BackgroundTransparency = 1
 	f.ZIndex = 2
 
-	local l = newLabel(f, name, 10)
-	l.Size = UDim2.new(0.55, 0, 1, 0)
+	local l = newLabel(f, name, 11)
+	l.Size = UDim2.new(0.52, 0, 1, 0)
 	l.TextYAlignment = Enum.TextYAlignment.Center
 
 	inputObj.Parent = f
-	inputObj.Size = UDim2.new(0.43, 0, 1, 0)
-	inputObj.Position = UDim2.new(0.57, 0, 0, 0)
+	inputObj.Size = UDim2.new(0.46, 0, 1, 0)
+	inputObj.Position = UDim2.new(0.54, 0, 0, 0)
 	return f
 end
 
@@ -854,65 +720,65 @@ createSettingRow(settingsPage, "Start Delay", newBox(nil, tostring(config.startD
 local startDelayInput = settingsPage:GetChildren()[#settingsPage:GetChildren()]:FindFirstChildOfClass("TextBox")
 
 local randomRow = Instance.new("Frame", settingsPage)
-randomRow.Size = UDim2.new(1, 0, 0, 28)
+randomRow.Size = UDim2.new(1, 0, 0, 30)
 randomRow.BackgroundTransparency = 1
 randomRow.ZIndex = 2
-local rl = newLabel(randomRow, "Random Speed", 10)
-rl.Size = UDim2.new(0.55, 0, 1, 0)
+local rl = newLabel(randomRow, "Random Speed", 11)
+rl.Size = UDim2.new(0.52, 0, 1, 0)
 rl.TextYAlignment = Enum.TextYAlignment.Center
 local randomToggleButton = newButton(randomRow, "Off")
-randomToggleButton.Size = UDim2.new(0.43, 0, 1, 0)
-randomToggleButton.Position = UDim2.new(0.57, 0, 0, 0)
+randomToggleButton.Size = UDim2.new(0.46, 0, 1, 0)
+randomToggleButton.Position = UDim2.new(0.54, 0, 0, 0)
 
 local autoDoneRow = Instance.new("Frame", settingsPage)
-autoDoneRow.Size = UDim2.new(1, 0, 0, 28)
+autoDoneRow.Size = UDim2.new(1, 0, 0, 30)
 autoDoneRow.BackgroundTransparency = 1
 autoDoneRow.ZIndex = 2
-local adl = newLabel(autoDoneRow, "Auto Done", 10)
-adl.Size = UDim2.new(0.55, 0, 1, 0)
+local adl = newLabel(autoDoneRow, "Auto Done", 11)
+adl.Size = UDim2.new(0.52, 0, 1, 0)
 adl.TextYAlignment = Enum.TextYAlignment.Center
 local autoDoneButton = newButton(autoDoneRow, "On")
-autoDoneButton.Size = UDim2.new(0.43, 0, 1, 0)
-autoDoneButton.Position = UDim2.new(0.57, 0, 0, 0)
+autoDoneButton.Size = UDim2.new(0.46, 0, 1, 0)
+autoDoneButton.Position = UDim2.new(0.54, 0, 0, 0)
 
 local minMaxRow = Instance.new("Frame", settingsPage)
-minMaxRow.Size = UDim2.new(1, 0, 0, 28)
+minMaxRow.Size = UDim2.new(1, 0, 0, 30)
 minMaxRow.BackgroundTransparency = 1
 minMaxRow.ZIndex = 2
-local mml = newLabel(minMaxRow, "Done Min/Max", 10)
-mml.Size = UDim2.new(0.38, 0, 1, 0)
+local mml = newLabel(minMaxRow, "Done Min/Max", 11)
+mml.Size = UDim2.new(0.36, 0, 1, 0)
 mml.TextYAlignment = Enum.TextYAlignment.Center
 local minInput = newBox(minMaxRow, tostring(config.autoDoneMin))
-minInput.Size = UDim2.new(0.28, 0, 1, 0)
-minInput.Position = UDim2.new(0.40, 0, 0, 0)
+minInput.Size = UDim2.new(0.29, 0, 1, 0)
+minInput.Position = UDim2.new(0.38, 0, 0, 0)
 local maxInput = newBox(minMaxRow, tostring(config.autoDoneMax))
-maxInput.Size = UDim2.new(0.28, 0, 1, 0)
-maxInput.Position = UDim2.new(0.70, 0, 0, 0)
+maxInput.Size = UDim2.new(0.29, 0, 1, 0)
+maxInput.Position = UDim2.new(0.69, 0, 0, 0)
 
 local antiDupeRow = Instance.new("Frame", settingsPage)
-antiDupeRow.Size = UDim2.new(1, 0, 0, 28)
+antiDupeRow.Size = UDim2.new(1, 0, 0, 30)
 antiDupeRow.BackgroundTransparency = 1
 antiDupeRow.ZIndex = 2
-local adl2 = newLabel(antiDupeRow, "Anti Dupe", 10)
-adl2.Size = UDim2.new(0.55, 0, 1, 0)
+local adl2 = newLabel(antiDupeRow, "Anti Dupe", 11)
+adl2.Size = UDim2.new(0.52, 0, 1, 0)
 adl2.TextYAlignment = Enum.TextYAlignment.Center
 local antiDupeToggle = newButton(antiDupeRow, "Off")
-antiDupeToggle.Size = UDim2.new(0.43, 0, 1, 0)
-antiDupeToggle.Position = UDim2.new(0.57, 0, 0, 0)
+antiDupeToggle.Size = UDim2.new(0.46, 0, 1, 0)
+antiDupeToggle.Position = UDim2.new(0.54, 0, 0, 0)
 
 createSettingRow(settingsPage, "Min Length", newBox(nil, tostring(config.minWordLength)))
 local shortInput = settingsPage:GetChildren()[#settingsPage:GetChildren()]:FindFirstChildOfClass("TextBox")
 
 local instantRow = Instance.new("Frame", settingsPage)
-instantRow.Size = UDim2.new(1, 0, 0, 28)
+instantRow.Size = UDim2.new(1, 0, 0, 30)
 instantRow.BackgroundTransparency = 1
 instantRow.ZIndex = 2
-local il = newLabel(instantRow, "Instant Type", 10)
-il.Size = UDim2.new(0.55, 0, 1, 0)
+local il = newLabel(instantRow, "Instant Type", 11)
+il.Size = UDim2.new(0.52, 0, 1, 0)
 il.TextYAlignment = Enum.TextYAlignment.Center
 local instantToggle = newButton(instantRow, "Off")
-instantToggle.Size = UDim2.new(0.43, 0, 1, 0)
-instantToggle.Position = UDim2.new(0.57, 0, 0, 0)
+instantToggle.Size = UDim2.new(0.46, 0, 1, 0)
+instantToggle.Position = UDim2.new(0.54, 0, 0, 0)
 
 createSettingRow(settingsPage, "Custom Words", newBox(nil, ""))
 local customInput = settingsPage:GetChildren()[#settingsPage:GetChildren()]:FindFirstChildOfClass("TextBox")
@@ -923,99 +789,152 @@ local endingInput = settingsPage:GetChildren()[#settingsPage:GetChildren()]:Find
 addSpacer(settingsPage, 8)
 
 local resetButton = newButton(settingsPage, "Reset Used Words")
-resetButton.Size = UDim2.new(1, 0, 0, 28)
+resetButton.Size = UDim2.new(1, 0, 0, 30)
 
 -- ==========================================
--- HISTORY PAGE UI
+-- HUMAN TYPING PAGE UI
 -- ==========================================
 
-local historyTitle = newLabel(historyPage, "Word History", 13)
-historyTitle.TextXAlignment = Enum.TextXAlignment.Center
-historyTitle.TextColor3 = themes[config.theme].highlight
+local humanTitle = newLabel(humanPage, "Human Typing Settings", 14)
+humanTitle.TextXAlignment = Enum.TextXAlignment.Center
+humanTitle.TextColor3 = themes[config.theme].highlight
 
-local historyTabBar = Instance.new("Frame", historyPage)
-historyTabBar.Size = UDim2.new(1, 0, 0, 30)
-historyTabBar.BackgroundTransparency = 1
-historyTabBar.ZIndex = 2
+addSpacer(humanPage, 3)
 
-local historyTabs = {"Typed", "Skipped", "Failed"}
-local historyTabButtons = {}
-local currentHistoryTab = "Typed"
+local humanToggleRow = Instance.new("Frame", humanPage)
+humanToggleRow.Size = UDim2.new(1, 0, 0, 30)
+humanToggleRow.BackgroundTransparency = 1
+humanToggleRow.ZIndex = 2
+local humanToggleLabel = newLabel(humanToggleRow, "Enable Human Typing", 12)
+humanToggleLabel.Size = UDim2.new(0.6, 0, 1, 0)
+humanToggleLabel.TextYAlignment = Enum.TextYAlignment.Center
+local humanToggle = newButton(humanToggleRow, "Off")
+humanToggle.Size = UDim2.new(0.38, 0, 1, 0)
+humanToggle.Position = UDim2.new(0.62, 0, 0, 0)
 
-for i, tabName in ipairs(historyTabs) do
-	local btn = newButton(historyTabBar, tabName)
-	btn.Size = UDim2.new(0.32, 0, 1, 0)
-	btn.Position = UDim2.new((i-1) * 0.34, 0, 0, 0)
-	btn.TextSize = 10
-	historyTabButtons[tabName] = btn
-end
+local humanSettingsContainer = Instance.new("Frame", humanPage)
+humanSettingsContainer.Size = UDim2.new(1, 0, 0, 10)
+humanSettingsContainer.BackgroundTransparency = 1
+humanSettingsContainer.Visible = false
+humanSettingsContainer.ZIndex = 2
+humanSettingsContainer.AutomaticSize = Enum.AutomaticSize.Y
 
-local historyListContainer = Instance.new("Frame", historyPage)
-historyListContainer.Size = UDim2.new(1, 0, 0, 200)
-historyListContainer.BackgroundColor3 = themes[config.theme].secondary
-historyListContainer.BorderSizePixel = 0
-historyListContainer.ZIndex = 2
+local humanSettingsLayout = Instance.new("UIListLayout", humanSettingsContainer)
+humanSettingsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+humanSettingsLayout.Padding = UDim.new(0, 5)
 
-local historyListCorner = Instance.new("UICorner", historyListContainer)
-historyListCorner.CornerRadius = UDim.new(0, 7)
+-- Base Speed
+local baseSpeedRow = Instance.new("Frame", humanSettingsContainer)
+baseSpeedRow.Size = UDim2.new(1, 0, 0, 30)
+baseSpeedRow.BackgroundTransparency = 1
+baseSpeedRow.ZIndex = 2
+local baseSpeedLabel = newLabel(baseSpeedRow, "Base Speed (s)", 11)
+baseSpeedLabel.Size = UDim2.new(0.52, 0, 1, 0)
+baseSpeedLabel.TextYAlignment = Enum.TextYAlignment.Center
+local baseSpeedInput = newBox(baseSpeedRow, tostring(config.humanBaseSpeed), 30)
+baseSpeedInput.Size = UDim2.new(0.46, 0, 1, 0)
+baseSpeedInput.Position = UDim2.new(0.54, 0, 0, 0)
 
-local historyListStroke = Instance.new("UIStroke", historyListContainer)
-historyListStroke.Color = themes[config.theme].accent
-historyListStroke.Thickness = 1
-historyListStroke.Transparency = 0.7
+-- Variation
+local variationRow = Instance.new("Frame", humanSettingsContainer)
+variationRow.Size = UDim2.new(1, 0, 0, 30)
+variationRow.BackgroundTransparency = 1
+variationRow.ZIndex = 2
+local variationLabel = newLabel(variationRow, "Speed Variation", 11)
+variationLabel.Size = UDim2.new(0.52, 0, 1, 0)
+variationLabel.TextYAlignment = Enum.TextYAlignment.Center
+local variationInput = newBox(variationRow, tostring(config.humanVariation), 30)
+variationInput.Size = UDim2.new(0.46, 0, 1, 0)
+variationInput.Position = UDim2.new(0.54, 0, 0, 0)
 
-local historyScrollFrame = Instance.new("ScrollingFrame", historyListContainer)
-historyScrollFrame.Size = UDim2.new(1, -6, 1, -6)
-historyScrollFrame.Position = UDim2.new(0, 3, 0, 3)
-historyScrollFrame.BackgroundTransparency = 1
-historyScrollFrame.ScrollBarThickness = 3
-historyScrollFrame.ScrollBarImageColor3 = themes[config.theme].accent
-historyScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-historyScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-historyScrollFrame.BorderSizePixel = 0
-historyScrollFrame.ZIndex = 3
+-- Pause Chance
+local pauseChanceRow = Instance.new("Frame", humanSettingsContainer)
+pauseChanceRow.Size = UDim2.new(1, 0, 0, 30)
+pauseChanceRow.BackgroundTransparency = 1
+pauseChanceRow.ZIndex = 2
+local pauseChanceLabel = newLabel(pauseChanceRow, "Pause Chance (%)", 11)
+pauseChanceLabel.Size = UDim2.new(0.52, 0, 1, 0)
+pauseChanceLabel.TextYAlignment = Enum.TextYAlignment.Center
+local pauseChanceInput = newBox(pauseChanceRow, tostring(config.humanPauseChance * 100), 30)
+pauseChanceInput.Size = UDim2.new(0.46, 0, 1, 0)
+pauseChanceInput.Position = UDim2.new(0.54, 0, 0, 0)
 
-local historyLayout = Instance.new("UIListLayout", historyScrollFrame)
-historyLayout.SortOrder = Enum.SortOrder.LayoutOrder
-historyLayout.Padding = UDim.new(0, 3)
+-- Pause Duration
+local pauseDurationRow = Instance.new("Frame", humanSettingsContainer)
+pauseDurationRow.Size = UDim2.new(1, 0, 0, 30)
+pauseDurationRow.BackgroundTransparency = 1
+pauseDurationRow.ZIndex = 2
+local pauseDurationLabel = newLabel(pauseDurationRow, "Pause Min/Max", 11)
+pauseDurationLabel.Size = UDim2.new(0.36, 0, 1, 0)
+pauseDurationLabel.TextYAlignment = Enum.TextYAlignment.Center
+local pauseMinInput = newBox(pauseDurationRow, tostring(config.humanPauseMin), 30)
+pauseMinInput.Size = UDim2.new(0.29, 0, 1, 0)
+pauseMinInput.Position = UDim2.new(0.38, 0, 0, 0)
+local pauseMaxInput = newBox(pauseDurationRow, tostring(config.humanPauseMax), 30)
+pauseMaxInput.Size = UDim2.new(0.29, 0, 1, 0)
+pauseMaxInput.Position = UDim2.new(0.69, 0, 0, 0)
 
-local historyPadding = Instance.new("UIPadding", historyScrollFrame)
-historyPadding.PaddingLeft = UDim.new(0, 3)
-historyPadding.PaddingRight = UDim.new(0, 3)
-historyPadding.PaddingTop = UDim.new(0, 3)
-historyPadding.PaddingBottom = UDim.new(0, 3)
+-- Burst Chance
+local burstChanceRow = Instance.new("Frame", humanSettingsContainer)
+burstChanceRow.Size = UDim2.new(1, 0, 0, 30)
+burstChanceRow.BackgroundTransparency = 1
+burstChanceRow.ZIndex = 2
+local burstChanceLabel = newLabel(burstChanceRow, "Burst Chance (%)", 11)
+burstChanceLabel.Size = UDim2.new(0.52, 0, 1, 0)
+burstChanceLabel.TextYAlignment = Enum.TextYAlignment.Center
+local burstChanceInput = newBox(burstChanceRow, tostring(config.humanBurstChance * 100), 30)
+burstChanceInput.Size = UDim2.new(0.46, 0, 1, 0)
+burstChanceInput.Position = UDim2.new(0.54, 0, 0, 0)
 
-local historyPageInfo = newLabel(historyPage, "Page 1", 10)
-historyPageInfo.TextXAlignment = Enum.TextXAlignment.Center
+-- Burst Speed
+local burstSpeedRow = Instance.new("Frame", humanSettingsContainer)
+burstSpeedRow.Size = UDim2.new(1, 0, 0, 30)
+burstSpeedRow.BackgroundTransparency = 1
+burstSpeedRow.ZIndex = 2
+local burstSpeedLabel = newLabel(burstSpeedRow, "Burst Multiplier", 11)
+burstSpeedLabel.Size = UDim2.new(0.52, 0, 1, 0)
+burstSpeedLabel.TextYAlignment = Enum.TextYAlignment.Center
+local burstSpeedInput = newBox(burstSpeedRow, tostring(config.humanBurstSpeed), 30)
+burstSpeedInput.Size = UDim2.new(0.46, 0, 1, 0)
+burstSpeedInput.Position = UDim2.new(0.54, 0, 0, 0)
 
-local historyPaginationRow = Instance.new("Frame", historyPage)
-historyPaginationRow.Size = UDim2.new(1, 0, 0, 26)
-historyPaginationRow.BackgroundTransparency = 1
-historyPaginationRow.ZIndex = 2
+-- Fatigue
+local fatigueRow = Instance.new("Frame", humanSettingsContainer)
+fatigueRow.Size = UDim2.new(1, 0, 0, 30)
+fatigueRow.BackgroundTransparency = 1
+fatigueRow.ZIndex = 2
+local fatigueLabel = newLabel(fatigueRow, "Fatigue Effect", 11)
+fatigueLabel.Size = UDim2.new(0.52, 0, 1, 0)
+fatigueLabel.TextYAlignment = Enum.TextYAlignment.Center
+local fatigueToggle = newButton(fatigueRow, config.humanFatigue and "On" or "Off")
+fatigueToggle.Size = UDim2.new(0.46, 0, 1, 0)
+fatigueToggle.Position = UDim2.new(0.54, 0, 0, 0)
 
-local historyPrevButton = newButton(historyPaginationRow, "<")
-historyPrevButton.Size = UDim2.new(0.48, 0, 1, 0)
-historyPrevButton.Position = UDim2.new(0, 0, 0, 0)
-
-local historyNextButton = newButton(historyPaginationRow, ">")
-historyNextButton.Size = UDim2.new(0.48, 0, 1, 0)
-historyNextButton.Position = UDim2.new(0.52, 0, 0, 0)
-
-local currentHistoryPage = 1
-local historyItemsPerPage = 10
+-- Fatigue Rate
+local fatigueRateRow = Instance.new("Frame", humanSettingsContainer)
+fatigueRateRow.Size = UDim2.new(1, 0, 0, 30)
+fatigueRateRow.BackgroundTransparency = 1
+fatigueRateRow.Visible = config.humanFatigue
+fatigueRateRow.ZIndex = 2
+local fatigueRateLabel = newLabel(fatigueRateRow, "Fatigue Rate", 11)
+fatigueRateLabel.Size = UDim2.new(0.52, 0, 1, 0)
+fatigueRateLabel.TextYAlignment = Enum.TextYAlignment.Center
+local fatigueRateInput = newBox(fatigueRateRow, tostring(config.humanFatigueRate), 30)
+fatigueRateInput.Size = UDim2.new(0.46, 0, 1, 0)
+fatigueRateInput.Position = UDim2.new(0.54, 0, 0, 0)
 
 -- ==========================================
 -- CONFIG PAGE UI
 -- ==========================================
 
-local configTitle = newLabel(configPage, "Configuration", 13)
+local configTitle = newLabel(configPage, "Configuration", 14)
 configTitle.TextXAlignment = Enum.TextXAlignment.Center
 configTitle.TextColor3 = themes[config.theme].highlight
 
 addSpacer(configPage, 4)
 
 local saveRow = Instance.new("Frame", configPage)
-saveRow.Size = UDim2.new(1, 0, 0, 28)
+saveRow.Size = UDim2.new(1, 0, 0, 30)
 saveRow.BackgroundTransparency = 1
 saveRow.ZIndex = 2
 local saveConfigButton = newButton(saveRow, "Save Config")
@@ -1024,13 +943,26 @@ local loadConfigButton = newButton(saveRow, "Load Config")
 loadConfigButton.Size = UDim2.new(0.48, 0, 1, 0)
 loadConfigButton.Position = UDim2.new(0.52, 0, 0, 0)
 
+addSpacer(configPage, 4)
+
+local autoLoadRow = Instance.new("Frame", configPage)
+autoLoadRow.Size = UDim2.new(1, 0, 0, 30)
+autoLoadRow.BackgroundTransparency = 1
+autoLoadRow.ZIndex = 2
+local autoLoadLabel = newLabel(autoLoadRow, "Auto Load Config", 11)
+autoLoadLabel.Size = UDim2.new(0.52, 0, 1, 0)
+autoLoadLabel.TextYAlignment = Enum.TextYAlignment.Center
+local autoLoadToggle = newButton(autoLoadRow, config.autoLoadConfig and "On" or "Off")
+autoLoadToggle.Size = UDim2.new(0.46, 0, 1, 0)
+autoLoadToggle.Position = UDim2.new(0.54, 0, 0, 0)
+
 addSpacer(configPage, 8)
 
-local themeLabel = newLabel(configPage, "Theme", 11)
+local themeLabel = newLabel(configPage, "Theme", 12)
 themeLabel.Size = UDim2.new(1, 0, 0, 18)
 
 local themeDropdownFrame = Instance.new("Frame", configPage)
-themeDropdownFrame.Size = UDim2.new(1, 0, 0, 28)
+themeDropdownFrame.Size = UDim2.new(1, 0, 0, 30)
 themeDropdownFrame.BackgroundColor3 = themes[config.theme].secondary
 themeDropdownFrame.BorderSizePixel = 0
 themeDropdownFrame.ZIndex = 2
@@ -1041,7 +973,7 @@ themeDropdownCorner.CornerRadius = UDim.new(0, 7)
 local themeDropdownStroke = Instance.new("UIStroke", themeDropdownFrame)
 themeDropdownStroke.Color = themes[config.theme].accent
 themeDropdownStroke.Thickness = 1
-themeDropdownStroke.Transparency = 0.7
+themeDropdownStroke.Transparency = 0.6
 
 local themeDropdownButton = Instance.new("TextButton", themeDropdownFrame)
 themeDropdownButton.Size = UDim2.new(1, 0, 1, 0)
@@ -1049,7 +981,7 @@ themeDropdownButton.BackgroundTransparency = 1
 themeDropdownButton.Text = config.theme
 themeDropdownButton.TextColor3 = themes[config.theme].text
 themeDropdownButton.Font = Enum.Font.GothamSemibold
-themeDropdownButton.TextSize = 11
+themeDropdownButton.TextSize = 12
 themeDropdownButton.ZIndex = 3
 
 local themeDropdownExpanded = false
@@ -1068,7 +1000,7 @@ themeDropdownListCorner.CornerRadius = UDim.new(0, 7)
 local themeDropdownListStroke = Instance.new("UIStroke", themeDropdownList)
 themeDropdownListStroke.Color = themes[config.theme].accent
 themeDropdownListStroke.Thickness = 1
-themeDropdownListStroke.Transparency = 0.7
+themeDropdownListStroke.Transparency = 0.6
 
 local themeDropdownLayout = Instance.new("UIListLayout", themeDropdownList)
 themeDropdownLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -1076,7 +1008,7 @@ themeDropdownLayout.Padding = UDim.new(0, 2)
 
 addSpacer(configPage, 4)
 
-local transparencyLabel = newLabel(configPage, "Transparency", 11)
+local transparencyLabel = newLabel(configPage, "Transparency", 12)
 transparencyLabel.Size = UDim2.new(1, 0, 0, 18)
 
 local transparencySliderFrame = Instance.new("Frame", configPage)
@@ -1091,7 +1023,7 @@ transparencySliderCorner.CornerRadius = UDim.new(0, 7)
 local transparencySliderStroke = Instance.new("UIStroke", transparencySliderFrame)
 transparencySliderStroke.Color = themes[config.theme].accent
 transparencySliderStroke.Thickness = 1
-transparencySliderStroke.Transparency = 0.7
+transparencySliderStroke.Transparency = 0.6
 
 local transparencySliderBar = Instance.new("Frame", transparencySliderFrame)
 transparencySliderBar.Size = UDim2.new(0.85, 0, 0, 5)
@@ -1123,26 +1055,26 @@ transparencyValueLabel.ZIndex = 3
 addSpacer(configPage, 4)
 
 local acrylicRow = Instance.new("Frame", configPage)
-acrylicRow.Size = UDim2.new(1, 0, 0, 28)
+acrylicRow.Size = UDim2.new(1, 0, 0, 30)
 acrylicRow.BackgroundTransparency = 1
 acrylicRow.ZIndex = 2
-local acrylicLabel = newLabel(acrylicRow, "Acrylic Effect", 10)
-acrylicLabel.Size = UDim2.new(0.55, 0, 1, 0)
+local acrylicLabel = newLabel(acrylicRow, "Acrylic Effect", 11)
+acrylicLabel.Size = UDim2.new(0.52, 0, 1, 0)
 acrylicLabel.TextYAlignment = Enum.TextYAlignment.Center
 local acrylicToggle = newButton(acrylicRow, config.acrylic and "On" or "Off")
-acrylicToggle.Size = UDim2.new(0.43, 0, 1, 0)
-acrylicToggle.Position = UDim2.new(0.57, 0, 0, 0)
+acrylicToggle.Size = UDim2.new(0.46, 0, 1, 0)
+acrylicToggle.Position = UDim2.new(0.54, 0, 0, 0)
 
 addSpacer(configPage, 8)
 
 local reloadDictButton = newButton(configPage, "Reload Dictionary")
-reloadDictButton.Size = UDim2.new(1, 0, 0, 28)
+reloadDictButton.Size = UDim2.new(1, 0, 0, 30)
 
 -- ==========================================
--- INFO PAGE UI (WITH PAGE 2)
+-- INFO PAGE UI
 -- ==========================================
 
-local infoTitle = newLabel(infoPage, "Definition Search", 13)
+local infoTitle = newLabel(infoPage, "Definition Search", 14)
 infoTitle.TextXAlignment = Enum.TextXAlignment.Center
 infoTitle.TextColor3 = themes[config.theme].highlight
 
@@ -1150,13 +1082,13 @@ local meaningInput = newBox(infoPage, "Enter word...")
 meaningInput.PlaceholderText = "Enter word..."
 
 local meaningSearchButton = newButton(infoPage, "Search Definition")
-meaningSearchButton.Size = UDim2.new(1, 0, 0, 28)
+meaningSearchButton.Size = UDim2.new(1, 0, 0, 30)
 
 local copyDefButton = newButton(infoPage, "Copy Definition")
-copyDefButton.Size = UDim2.new(1, 0, 0, 28)
+copyDefButton.Size = UDim2.new(1, 0, 0, 30)
 
 local meaningOutputFrame = Instance.new("Frame", infoPage)
-meaningOutputFrame.Size = UDim2.new(1, 0, 0, 130)
+meaningOutputFrame.Size = UDim2.new(1, 0, 0, 140)
 meaningOutputFrame.BackgroundColor3 = themes[config.theme].secondary
 meaningOutputFrame.BorderSizePixel = 0
 meaningOutputFrame.ZIndex = 2
@@ -1167,122 +1099,15 @@ meaningOutputCorner.CornerRadius = UDim.new(0, 7)
 local meaningOutputStroke = Instance.new("UIStroke", meaningOutputFrame)
 meaningOutputStroke.Color = themes[config.theme].accent
 meaningOutputStroke.Thickness = 1
-meaningOutputStroke.Transparency = 0.7
+meaningOutputStroke.Transparency = 0.6
 
-local meaningOutput = newLabel(meaningOutputFrame, "Definition will appear here...", 9)
+local meaningOutput = newLabel(meaningOutputFrame, "Definition will appear here...", 10)
 meaningOutput.Size = UDim2.new(1, -10, 1, -10)
 meaningOutput.Position = UDim2.new(0, 5, 0, 5)
 meaningOutput.TextWrapped = true
 meaningOutput.TextYAlignment = Enum.TextYAlignment.Top
 meaningOutput.TextXAlignment = Enum.TextXAlignment.Left
 meaningOutput.ZIndex = 3
-
--- Info Page Pagination
-local infoPaginationRow = Instance.new("Frame", infoPage)
-infoPaginationRow.Size = UDim2.new(1, 0, 0, 26)
-infoPaginationRow.BackgroundTransparency = 1
-infoPaginationRow.ZIndex = 2
-
-local infoPrevButton = newButton(infoPaginationRow, "<")
-infoPrevButton.Size = UDim2.new(0.48, 0, 1, 0)
-infoPrevButton.Position = UDim2.new(0, 0, 0, 0)
-
-local infoNextButton = newButton(infoPaginationRow, ">")
-infoNextButton.Size = UDim2.new(0.48, 0, 1, 0)
-infoNextButton.Position = UDim2.new(0.52, 0, 0, 0)
-
--- Info Page 2 Container
-local infoPage2Container = Instance.new("Frame", contentContainer)
-infoPage2Container.Size = UDim2.new(1, -6, 1, -6)
-infoPage2Container.Position = UDim2.new(0, 3, 0, 3)
-infoPage2Container.BackgroundTransparency = 1
-infoPage2Container.Visible = false
-infoPage2Container.ZIndex = 2
-
-local infoPage2ScrollFrame = Instance.new("ScrollingFrame", infoPage2Container)
-infoPage2ScrollFrame.Size = UDim2.new(1, 0, 1, 0)
-infoPage2ScrollFrame.BackgroundTransparency = 1
-infoPage2ScrollFrame.ScrollBarThickness = 3
-infoPage2ScrollFrame.ScrollBarImageColor3 = themes[config.theme].accent
-infoPage2ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-infoPage2ScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-infoPage2ScrollFrame.BorderSizePixel = 0
-infoPage2ScrollFrame.ZIndex = 2
-
-local infoPage2Layout = Instance.new("UIListLayout", infoPage2ScrollFrame)
-infoPage2Layout.SortOrder = Enum.SortOrder.LayoutOrder
-infoPage2Layout.Padding = UDim.new(0, 5)
-
-local infoPage2Padding = Instance.new("UIPadding", infoPage2ScrollFrame)
-infoPage2Padding.PaddingLeft = UDim.new(0, 5)
-infoPage2Padding.PaddingRight = UDim.new(0, 5)
-infoPage2Padding.PaddingTop = UDim.new(0, 5)
-
-local helpTitle = newLabel(infoPage2ScrollFrame, "How Everything Works", 12)
-helpTitle.TextXAlignment = Enum.TextXAlignment.Center
-helpTitle.TextColor3 = themes[config.theme].highlight
-
-local function createHelpSection(title, text)
-	local section = Instance.new("Frame", infoPage2ScrollFrame)
-	section.Size = UDim2.new(1, 0, 0, 0)
-	section.BackgroundColor3 = themes[config.theme].secondary
-	section.BorderSizePixel = 0
-	section.ZIndex = 2
-	section.AutomaticSize = Enum.AutomaticSize.Y
-	
-	local sectionCorner = Instance.new("UICorner", section)
-	sectionCorner.CornerRadius = UDim.new(0, 6)
-	
-	local sectionLayout = Instance.new("UIListLayout", section)
-	sectionLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	sectionLayout.Padding = UDim.new(0, 2)
-	
-	local sectionPadding = Instance.new("UIPadding", section)
-	sectionPadding.PaddingLeft = UDim.new(0, 5)
-	sectionPadding.PaddingRight = UDim.new(0, 5)
-	sectionPadding.PaddingTop = UDim.new(0, 4)
-	sectionPadding.PaddingBottom = UDim.new(0, 4)
-	
-	local sectionTitle = newLabel(section, title, 9)
-	sectionTitle.TextXAlignment = Enum.TextXAlignment.Left
-	sectionTitle.TextColor3 = themes[config.theme].highlight
-	sectionTitle.Size = UDim2.new(1, 0, 0, 14)
-	
-	local sectionText = newLabel(section, text, 7)
-	sectionText.TextXAlignment = Enum.TextXAlignment.Left
-	sectionText.TextWrapped = true
-	sectionText.TextYAlignment = Enum.TextYAlignment.Top
-	sectionText.Size = UDim2.new(1, 0, 0, 0)
-	sectionText.AutomaticSize = Enum.AutomaticSize.Y
-end
-
-createHelpSection("Auto Type V1", "Automatically types words when it's your turn. Uses standard typing delay settings.")
-
-createHelpSection("Auto Type V2", "Advanced auto-typing with customizable speed ranges (Min/Max). More flexible than V1.")
-
-createHelpSection("More Random", "Makes V2 typing speed vary more between letters, avoiding predictable patterns.")
-
-createHelpSection("More Human", "Enables human-like typing with pauses, flow states, bursts, and occasional mistakes.")
-
-createHelpSection("Pause Settings", "Pause %: How often to add thinking pauses (0-100%). Multiplier: How much longer pauses last (1.0+).")
-
-createHelpSection("Flow Settings", "Flow %: How often to enter 'flow state' with faster typing (0-100%). Multiplier: Speed during flow (0.1-1.0).")
-
-createHelpSection("Burst Settings", "Burst %: How often to rapidly type multiple letters (0-100%). Len: How many letters to burst. Speed: Multiplier for burst speed (0.1-1.0).")
-
-createHelpSection("Mistakes", "Mistake %: Chance to type wrong letter then backspace (0-100%). Makes typing more realistic.")
-
-createHelpSection("Anti Dupe", "Prevents using the same word twice. Useful for longer sessions.")
-
-createHelpSection("Longest First", "Prioritizes longer words over shorter ones when finding matches.")
-
-createHelpSection("Custom Words", "Add your own words separated by commas. They'll be included in suggestions.")
-
-createHelpSection("End In", "Filter words to only show those ending in specific letters (1-2 letters).")
-
-createHelpSection("History", "Tracks all typed, skipped, and failed words. Use buttons to blacklist, favorite, or remove words.")
-
-createHelpSection("Themes", "Choose from Dark, Blue, Purple, Green, or Red themes. Adjust transparency and enable acrylic for blur effect.")
 
 -- ==========================================
 -- THEME SYSTEM
@@ -1315,7 +1140,7 @@ local function applyTheme(themeName)
 			local stroke = element:FindFirstChildOfClass("UIStroke")
 			if stroke then stroke.Color = theme.accent end
 		elseif element:IsA("Frame") and element.BackgroundTransparency < 1 then
-			if element.Name:find("Container") or element.Name:find("Output") or element.Name:find("List") or element == historyListContainer or element == meaningOutputFrame then
+			if element.Name:find("Container") or element.Name:find("Output") or element.Name:find("List") or element == meaningOutputFrame then
 				element.BackgroundColor3 = theme.secondary
 				local stroke = element:FindFirstChildOfClass("UIStroke")
 				if stroke then stroke.Color = theme.accent end
@@ -1336,10 +1161,9 @@ local function applyTheme(themeName)
 	wordLabel.BackgroundColor3 = theme.secondary
 	wordStroke.Color = theme.accent
 	title.TextColor3 = theme.highlight
-	historyTitle.TextColor3 = theme.highlight
+	humanTitle.TextColor3 = theme.highlight
 	configTitle.TextColor3 = theme.highlight
 	infoTitle.TextColor3 = theme.highlight
-	helpTitle.TextColor3 = theme.highlight
 	
 	themeDropdownButton.Text = themeName
 	themeDropdownButton.TextColor3 = theme.text
@@ -1351,7 +1175,7 @@ end
 -- Dropdown positioning update function
 local function updateDropdownPosition()
 	local absPos = themeDropdownFrame.AbsolutePosition
-	themeDropdownList.Position = UDim2.new(0, absPos.X, 0, absPos.Y + 30)
+	themeDropdownList.Position = UDim2.new(0, absPos.X, 0, absPos.Y + 32)
 end
 
 themeDropdownButton.MouseButton1Click:Connect(function()
@@ -1368,12 +1192,12 @@ themeDropdownButton.MouseButton1Click:Connect(function()
 		local themeCount = 0
 		for _ in pairs(themes) do themeCount = themeCount + 1 end
 		
-		themeDropdownList.Size = UDim2.new(0, 248, 0, themeCount * 28)
-		themeDropdownList.CanvasSize = UDim2.new(0, 0, 0, themeCount * 28)
+		themeDropdownList.Size = UDim2.new(0, 248, 0, themeCount * 30)
+		themeDropdownList.CanvasSize = UDim2.new(0, 0, 0, themeCount * 30)
 		
 		for themeName, _ in pairs(themes) do
 			local themeOption = Instance.new("TextButton", themeDropdownList)
-			themeOption.Size = UDim2.new(1, -6, 0, 26)
+			themeOption.Size = UDim2.new(1, -6, 0, 28)
 			themeOption.BackgroundColor3 = themes[config.theme].secondary
 			themeOption.TextColor3 = themes[config.theme].text
 			themeOption.Text = themeName
@@ -1383,7 +1207,7 @@ themeDropdownButton.MouseButton1Click:Connect(function()
 			themeOption.ZIndex = 101
 			
 			local optCorner = Instance.new("UICorner", themeOption)
-			optCorner.CornerRadius = UDim.new(0, 6)
+			optCorner.CornerRadius = UDim.new(0, 5)
 			
 			themeOption.MouseButton1Click:Connect(function()
 				applyTheme(themeName)
@@ -1404,11 +1228,13 @@ themeDropdownButton.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Transparency Slider Logic (FIXED)
+-- Fixed Transparency Slider Logic (only works when on Config page AND actively dragging)
 local draggingTransparency = false
 
 transparencySliderHandle.MouseButton1Down:Connect(function()
-	draggingTransparency = true
+	if configPage.Visible then
+		draggingTransparency = true
+	end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
@@ -1417,8 +1243,15 @@ UserInputService.InputEnded:Connect(function(input)
 	end
 end)
 
-UserInputService.InputChanged:Connect(function(input)
-	if draggingTransparency and input.UserInputType == Enum.UserInputType.MouseMovement then
+-- Monitor page changes to stop dragging
+for pageName, btn in pairs(navButtons) do
+	btn.MouseButton1Click:Connect(function()
+		draggingTransparency = false
+	end)
+end
+
+RunService.RenderStepped:Connect(function()
+	if draggingTransparency and configPage.Visible then
 		local mousePos = UserInputService:GetMouseLocation()
 		local barPos = transparencySliderBar.AbsolutePosition
 		local barSize = transparencySliderBar.AbsoluteSize
@@ -1434,7 +1267,7 @@ UserInputService.InputChanged:Connect(function(input)
 	end
 end)
 
--- Acrylic Toggle (FIXED)
+-- Fixed Acrylic Toggle
 acrylicToggle.MouseButton1Click:Connect(function()
 	config.acrylic = not config.acrylic
 	acrylicToggle.Text = config.acrylic and "On" or "Off"
@@ -1448,264 +1281,91 @@ acrylicToggle.MouseButton1Click:Connect(function()
 			acrylicFrame.BackgroundTransparency = 0.92
 			acrylicFrame.BorderSizePixel = 0
 			acrylicFrame.ZIndex = 1
-			Instance.new("UICorner", acrylicFrame).CornerRadius = UDim.new(0, 10)
+			
+			local acrylicCorner = Instance.new("UICorner", acrylicFrame)
+			acrylicCorner.CornerRadius = UDim.new(0, 14)
+			
+			local acrylicBlur = Instance.new("BlurEffect", acrylicFrame)
+			acrylicBlur.Size = 8
 		end
 		acrylicFrame.Visible = true
-		
-		if not acrylicBlur then
-			acrylicBlur = Instance.new("BlurEffect", workspace.CurrentCamera)
-			acrylicBlur.Name = "WordHelperAcrylic"
-		end
-		acrylicBlur.Size = 0
-		acrylicBlur.Enabled = true
-		
-		-- Gradually increase blur only when GUI is visible
-		task.spawn(function()
-			local targetSize = 6
-			while config.acrylic and acrylicBlur and acrylicBlur.Size < targetSize do
-				acrylicBlur.Size = math.min(acrylicBlur.Size + 0.5, targetSize)
-				task.wait(0.05)
-			end
-		end)
 	else
 		if acrylicFrame then
 			acrylicFrame.Visible = false
 		end
-		
-		if acrylicBlur then
-			-- Gradually decrease blur
-			task.spawn(function()
-				while acrylicBlur and acrylicBlur.Size > 0 do
-					acrylicBlur.Size = math.max(acrylicBlur.Size - 0.5, 0)
-					task.wait(0.05)
-				end
-				if acrylicBlur then
-					acrylicBlur.Enabled = false
-				end
-			end)
-		end
 	end
 end)
 
--- ==========================================
--- HISTORY SYSTEM
--- ==========================================
-
-local function addToHistory(word, category)
-	if category == "Typed" then
-		if not table.find(typedWords, word) then
-			table.insert(typedWords, 1, word)
-		end
-	elseif category == "Skipped" then
-		if not table.find(skippedWords, word) then
-			table.insert(skippedWords, 1, word)
-		end
-	elseif category == "Failed" then
-		if not table.find(failedWords, word) then
-			table.insert(failedWords, 1, word)
-		end
-	end
-end
-
-local function getHistoryList(category)
-	if category == "Typed" then
-		return typedWords
-	elseif category == "Skipped" then
-		return skippedWords
-	elseif category == "Failed" then
-		return failedWords
-	end
-	return {}
-end
-
-local function sendToChat(message)
-	if setclipboard then
-		setclipboard(message)
-	end
-	
-	local chatBar = player.PlayerGui:FindFirstChild("Chat")
-	if chatBar then
-		local chatFrame = chatBar:FindFirstChild("Frame")
-		if chatFrame then
-			local chatBarParent = chatFrame:FindFirstChild("ChatBarParentFrame")
-			if chatBarParent then
-				local frameIn = chatBarParent:FindFirstChild("Frame")
-				if frameIn then
-					local boxFrame = frameIn:FindFirstChild("BoxFrame")
-					if boxFrame then
-						local frameDeep = boxFrame:FindFirstChild("Frame")
-						if frameDeep then
-							local chatInput = frameDeep:FindFirstChild("ChatBar")
-							if chatInput and chatInput:IsA("TextBox") then
-								chatInput.Text = message
-								task.wait(0.05)
-								chatInput:CaptureFocus()
-							end
-						end
-					end
-				end
-			end
-		end
-	end
-end
-
-local function createHistoryItem(word, category)
-	local item = Instance.new("Frame", historyScrollFrame)
-	item.Size = UDim2.new(1, 0, 0, 55)
-	item.BackgroundColor3 = themes[config.theme].secondary
-	item.BorderSizePixel = 0
-	item.ZIndex = 4
-	
-	local itemCorner = Instance.new("UICorner", item)
-	itemCorner.CornerRadius = UDim.new(0, 5)
-	
-	local itemStroke = Instance.new("UIStroke", item)
-	itemStroke.Color = themes[config.theme].accent
-	itemStroke.Thickness = 1
-	itemStroke.Transparency = 0.8
-	
-	local wordLabelItem = Instance.new("TextLabel", item)
-	wordLabelItem.Size = UDim2.new(1, -8, 0, 18)
-	wordLabelItem.Position = UDim2.new(0, 4, 0, 4)
-	wordLabelItem.BackgroundTransparency = 1
-	wordLabelItem.Text = word
-	wordLabelItem.Font = Enum.Font.GothamBold
-	wordLabelItem.TextColor3 = themes[config.theme].highlight
-	wordLabelItem.TextSize = 11
-	wordLabelItem.TextXAlignment = Enum.TextXAlignment.Left
-	wordLabelItem.ZIndex = 5
-	
-	local btnSize = UDim2.new(0.18, 0, 0, 20)
-	local btnY = 27
-	
-	local blacklistBtn = newButton(item, "BL")
-	blacklistBtn.Size = btnSize
-	blacklistBtn.Position = UDim2.new(0.02, 0, 0, btnY)
-	blacklistBtn.TextSize = 8
-	blacklistBtn.ZIndex = 5
-	
-	local favorBtn = newButton(item, "Fav")
-	favorBtn.Size = btnSize
-	favorBtn.Position = UDim2.new(0.21, 0, 0, btnY)
-	favorBtn.TextSize = 8
-	favorBtn.ZIndex = 5
-	
-	local removeBtn = newButton(item, "Rem")
-	removeBtn.Size = btnSize
-	removeBtn.Position = UDim2.new(0.40, 0, 0, btnY)
-	removeBtn.TextSize = 8
-	removeBtn.ZIndex = 5
-	
-	local unblacklistBtn = newButton(item, "UBL")
-	unblacklistBtn.Size = btnSize
-	unblacklistBtn.Position = UDim2.new(0.59, 0, 0, btnY)
-	unblacklistBtn.TextSize = 8
-	unblacklistBtn.ZIndex = 5
-	
-	local chatBtn = newButton(item, "Chat")
-	chatBtn.Size = btnSize
-	chatBtn.Position = UDim2.new(0.78, 0, 0, btnY)
-	chatBtn.TextSize = 8
-	chatBtn.ZIndex = 5
-	
-	blacklistBtn.MouseButton1Click:Connect(function()
-		blacklist[word] = true
-		blacklistBtn.Text = "✓"
-	end)
-	
-	favorBtn.MouseButton1Click:Connect(function()
-		favoredWords[word] = true
-		favorBtn.Text = "★"
-	end)
-	
-	removeBtn.MouseButton1Click:Connect(function()
-		usedWords[word] = nil
-		removeBtn.Text = "✓"
-	end)
-	
-	unblacklistBtn.MouseButton1Click:Connect(function()
-		blacklist[word] = nil
-		unblacklistBtn.Text = "✓"
-	end)
-	
-	chatBtn.MouseButton1Click:Connect(function()
-		sendToChat(word)
-	end)
-	
-	return item
-end
-
-local function refreshHistoryList()
-	for _, child in ipairs(historyScrollFrame:GetChildren()) do
-		if child:IsA("Frame") then
-			child:Destroy()
-		end
-	end
-	
-	local list = getHistoryList(currentHistoryTab)
-	local startIdx = (currentHistoryPage - 1) * historyItemsPerPage + 1
-	local endIdx = math.min(startIdx + historyItemsPerPage - 1, #list)
-	
-	for i = startIdx, endIdx do
-		if list[i] then
-			createHistoryItem(list[i], currentHistoryTab)
-		end
-	end
-	
-	local totalPages = math.ceil(#list / historyItemsPerPage)
-	if totalPages == 0 then totalPages = 1 end
-	historyPageInfo.Text = string.format("Page %d / %d", currentHistoryPage, totalPages)
-end
-
-for tabName, btn in pairs(historyTabButtons) do
-	btn.MouseButton1Click:Connect(function()
-		currentHistoryTab = tabName
-		currentHistoryPage = 1
-		refreshHistoryList()
-	end)
-end
-
-historyPrevButton.MouseButton1Click:Connect(function()
-	if currentHistoryPage > 1 then
-		currentHistoryPage = currentHistoryPage - 1
-		refreshHistoryList()
-	end
+-- Auto Load Toggle
+autoLoadToggle.MouseButton1Click:Connect(function()
+	config.autoLoadConfig = not config.autoLoadConfig
+	autoLoadToggle.Text = config.autoLoadConfig and "On" or "Off"
 end)
 
-historyNextButton.MouseButton1Click:Connect(function()
-	local list = getHistoryList(currentHistoryTab)
-	local totalPages = math.ceil(#list / historyItemsPerPage)
-	if currentHistoryPage < totalPages then
-		currentHistoryPage = currentHistoryPage + 1
-		refreshHistoryList()
-	end
+-- Human Typing Toggle
+humanToggle.MouseButton1Click:Connect(function()
+	config.humanTyping = not config.humanTyping
+	humanToggle.Text = config.humanTyping and "On" or "Off"
+	humanSettingsContainer.Visible = config.humanTyping
 end)
 
--- Info Page Navigation
-local currentInfoPage = 1
-
-local function updateInfoPage()
-	if currentInfoPage == 1 then
-		infoPage.Visible = true
-		infoPage2Container.Visible = false
-	else
-		infoPage.Visible = false
-		infoPage2Container.Visible = true
-	end
-end
-
-infoPrevButton.MouseButton1Click:Connect(function()
-	if currentInfoPage > 1 then
-		currentInfoPage = currentInfoPage - 1
-		updateInfoPage()
-	end
+-- Human Settings Input Handlers
+baseSpeedInput.FocusLost:Connect(function()
+	local v = tonumber(baseSpeedInput.Text)
+	if v and v >= 0 then config.humanBaseSpeed = v end
+	baseSpeedInput.Text = tostring(config.humanBaseSpeed)
 end)
 
-infoNextButton.MouseButton1Click:Connect(function()
-	if currentInfoPage < 2 then
-		currentInfoPage = currentInfoPage + 1
-		updateInfoPage()
+variationInput.FocusLost:Connect(function()
+	local v = tonumber(variationInput.Text)
+	if v and v >= 0 then config.humanVariation = v end
+	variationInput.Text = tostring(config.humanVariation)
+end)
+
+pauseChanceInput.FocusLost:Connect(function()
+	local v = tonumber(pauseChanceInput.Text)
+	if v and v >= 0 and v <= 100 then
+		config.humanPauseChance = v / 100
 	end
+	pauseChanceInput.Text = tostring(config.humanPauseChance * 100)
+end)
+
+pauseMinInput.FocusLost:Connect(function()
+	local v = tonumber(pauseMinInput.Text)
+	if v and v >= 0 then config.humanPauseMin = v end
+	pauseMinInput.Text = tostring(config.humanPauseMin)
+end)
+
+pauseMaxInput.FocusLost:Connect(function()
+	local v = tonumber(pauseMaxInput.Text)
+	if v and v >= 0 then config.humanPauseMax = v end
+	pauseMaxInput.Text = tostring(config.humanPauseMax)
+end)
+
+burstChanceInput.FocusLost:Connect(function()
+	local v = tonumber(burstChanceInput.Text)
+	if v and v >= 0 and v <= 100 then
+		config.humanBurstChance = v / 100
+	end
+	burstChanceInput.Text = tostring(config.humanBurstChance * 100)
+end)
+
+burstSpeedInput.FocusLost:Connect(function()
+	local v = tonumber(burstSpeedInput.Text)
+	if v and v > 0 and v <= 1 then config.humanBurstSpeed = v end
+	burstSpeedInput.Text = tostring(config.humanBurstSpeed)
+end)
+
+fatigueToggle.MouseButton1Click:Connect(function()
+	config.humanFatigue = not config.humanFatigue
+	fatigueToggle.Text = config.humanFatigue and "On" or "Off"
+	fatigueRateRow.Visible = config.humanFatigue
+end)
+
+fatigueRateInput.FocusLost:Connect(function()
+	local v = tonumber(fatigueRateInput.Text)
+	if v and v >= 0 and v <= 1 then config.humanFatigueRate = v end
+	fatigueRateInput.Text = tostring(config.humanFatigueRate)
 end)
 
 -- ==========================================
@@ -1717,7 +1377,7 @@ loadDictionaries()
 local pages = {
 	Main = mainPage,
 	Settings = settingsPage,
-	History = historyPage,
+	Human = humanPage,
 	Config = configPage,
 	Info = infoPage
 }
@@ -1726,18 +1386,6 @@ for pageName, btn in pairs(navButtons) do
 	btn.MouseButton1Click:Connect(function()
 		for name, page in pairs(pages) do
 			page.Visible = (name == pageName)
-		end
-		
-		-- Handle info page special case
-		if pageName == "Info" then
-			currentInfoPage = 1
-			updateInfoPage()
-		else
-			infoPage2Container.Visible = false
-		end
-		
-		if pageName == "History" then
-			refreshHistoryList()
 		end
 	end)
 end
@@ -1782,13 +1430,31 @@ local longest = false
 local lastPrefix = ""
 local autoTypePending = false
 local autoTypeWaitCoroutine = nil
+local charTypedCount = 0
+local keyboardCache = nil
+local lastKeyboardCheck = 0
 
+-- Optimized keyboard getter with caching
 local function safeGetKeyboard()
+	local now = tick()
+	if keyboardCache and (now - lastKeyboardCheck) < 0.5 then
+		return keyboardCache
+	end
+	
 	local ok, overbar = pcall(function() return player.PlayerGui.Overbar end)
-	if not ok or not overbar then return nil end
+	if not ok or not overbar then 
+		keyboardCache = nil
+		return nil 
+	end
 	local fr = overbar:FindFirstChild("Frame")
-	if not fr then return nil end
+	if not fr then 
+		keyboardCache = nil
+		return nil 
+	end
 	local kb = fr:FindFirstChild("Keyboard")
+	
+	keyboardCache = kb
+	lastKeyboardCheck = now
 	return kb
 end
 
@@ -1809,26 +1475,42 @@ local function clearTypedContinuation()
 	typedCount = 0
 end
 
+-- Cached letter buttons for faster access
+local letterButtonCache = {}
+local lastCacheUpdate = 0
+
 local function pressLetter(c)
 	local kb = safeGetKeyboard()
 	if not kb then return end
+	
 	c = c:upper()
-	for _, rowName in ipairs({"1","2","3"}) do
-		local row = kb:FindFirstChild(rowName)
-		if row then
-			local children = row:GetChildren()
-			for i = 1, #children do
-				local btn = children[i]
-				if btn and btn:IsA("TextButton") then
-					local t = (btn.Text or ""):upper()
-					local n = (btn.Name or ""):upper()
-					if t == c or n == c then
-						pcall(function() firesignal(btn.MouseButton1Click) end)
-						return
+	
+	-- Rebuild cache every 2 seconds
+	local now = tick()
+	if now - lastCacheUpdate > 2 then
+		letterButtonCache = {}
+		for _, rowName in ipairs({"1","2","3"}) do
+			local row = kb:FindFirstChild(rowName)
+			if row then
+				for _, btn in ipairs(row:GetChildren()) do
+					if btn:IsA("TextButton") then
+						local t = (btn.Text or ""):upper()
+						local n = (btn.Name or ""):upper()
+						if #t == 1 then
+							letterButtonCache[t] = btn
+						elseif #n == 1 then
+							letterButtonCache[n] = btn
+						end
 					end
 				end
 			end
 		end
+		lastCacheUpdate = now
+	end
+	
+	local btn = letterButtonCache[c]
+	if btn then
+		pcall(function() firesignal(btn.MouseButton1Click) end)
 	end
 end
 
@@ -1854,10 +1536,7 @@ local function schedulePressDone()
 	end)
 end
 
-local burstCounter = 0
-local inBurst = false
-
-local function getV2TypeDelay(letterIndex, totalLetters)
+local function getV2TypeDelay()
 	local minv = config.autoTypeV2Min
 	local maxv = config.autoTypeV2Max
 	
@@ -1865,60 +1544,31 @@ local function getV2TypeDelay(letterIndex, totalLetters)
 		return minv
 	end
 	
-	if config.autoTypeV2MoreHuman then
-		local range = maxv - minv
-		local baseDelay = minv + math.random() * range
-		
-		-- Burst typing
-		if not inBurst and math.random() < config.humanBurstChance then
-			inBurst = true
-			burstCounter = config.humanBurstLength
-		end
-		
-		if inBurst and burstCounter > 0 then
-			burstCounter = burstCounter - 1
-			if burstCounter == 0 then
-				inBurst = false
-			end
-			return baseDelay * config.humanBurstSpeed
-		end
-		
-		-- Pause chance
-		if math.random() < config.humanPauseChance then
-			baseDelay = baseDelay * config.humanPauseMultiplier
-		end
-		
-		-- Flow state chance
-		if math.random() < config.humanFlowChance then
-			baseDelay = baseDelay * config.humanFlowMultiplier
-		end
-		
-		return math.clamp(baseDelay, minv, maxv * 2)
-	elseif config.autoTypeV2MoreRandom then
-		local range = maxv - minv
-		local lastDelay = lastV2TypeTimes[#lastV2TypeTimes]
-		
-		if lastDelay then
-			local attempts = 0
-			local newDelay
-			repeat
-				newDelay = minv + math.random() * range
-				attempts = attempts + 1
-			until math.abs(newDelay - lastDelay) > range * 0.15 or attempts > 10
-			
-			table.insert(lastV2TypeTimes, newDelay)
-			if #lastV2TypeTimes > 5 then
-				table.remove(lastV2TypeTimes, 1)
-			end
-			return newDelay
-		else
-			local delay = minv + math.random() * range
-			table.insert(lastV2TypeTimes, delay)
-			return delay
-		end
-	else
-		return minv + math.random() * (maxv - minv)
+	return minv + math.random() * (maxv - minv)
+end
+
+local function getHumanTypeDelay()
+	local baseSpeed = config.humanBaseSpeed
+	local variation = config.humanVariation
+	
+	local delay = baseSpeed + (math.random() * 2 - 1) * variation
+	
+	if math.random() < config.humanPauseChance then
+		local pauseDuration = config.humanPauseMin + 
+			math.random() * (config.humanPauseMax - config.humanPauseMin)
+		delay = delay + pauseDuration
 	end
+	
+	if math.random() < config.humanBurstChance then
+		delay = delay * config.humanBurstSpeed
+	end
+	
+	if config.humanFatigue then
+		local fatigueMultiplier = 1 + (charTypedCount * config.humanFatigueRate)
+		delay = delay * fatigueMultiplier
+	end
+	
+	return math.max(delay, 0.01)
 end
 
 local function typeContinuation(full, prefix, useV2Speed)
@@ -1931,13 +1581,11 @@ local function typeContinuation(full, prefix, useV2Speed)
 	local start = #prefix + 1
 	if start > #full then
 		isTypingInProgress = false
-		addToHistory(full, "Failed")
 		return
 	end
 
 	local cont = full:sub(start)
-	burstCounter = 0
-	inBurst = false
+	charTypedCount = 0
 
 	if config.instantType then
 		for i = 1, #cont do
@@ -1946,24 +1594,15 @@ local function typeContinuation(full, prefix, useV2Speed)
 		typedCount = #cont
 	else
 		for i = 1, #cont do
-			local char = cont:sub(i,i)
-			
-			-- Mistake simulation
-			if useV2Speed and config.autoTypeV2MoreHuman and math.random() < config.humanMistakeChance then
-				local wrongChars = "qwertyuiopasdfghjklzxcvbnm"
-				local wrongChar = wrongChars:sub(math.random(1, #wrongChars), math.random(1, #wrongChars))
-				pressLetter(wrongChar)
-				task.wait(0.1)
-				pressDelete()
-				task.wait(0.05)
-			end
-			
-			pressLetter(char)
+			pressLetter(cont:sub(i,i))
 			typedCount = typedCount + 1
+			charTypedCount = charTypedCount + 1
 			
 			local delay
-			if useV2Speed then
-				delay = getV2TypeDelay(i, #cont)
+			if config.humanTyping then
+				delay = getHumanTypeDelay()
+			elseif useV2Speed then
+				delay = getV2TypeDelay()
 			else
 				delay = config.typingDelay
 				if config.randomizeTyping then
@@ -1971,14 +1610,11 @@ local function typeContinuation(full, prefix, useV2Speed)
 				end
 			end
 			
-			if delay > 0 and i < #cont then
-				task.wait(delay)
-			end
+			if delay > 0 then task.wait(delay) end
 		end
 	end
 
 	isTypingInProgress = false
-	addToHistory(full, "Typed")
 end
 
 delayInput.FocusLost:Connect(function()
@@ -2064,9 +1700,6 @@ autoTypeButton.MouseButton1Click:Connect(function()
 		config.autoTypeV2 = false
 		autoTypeV2Toggle.Text = "Off"
 		v2MinMaxRow.Visible = false
-		v2MoreRandomRow.Visible = false
-		v2MoreHumanRow.Visible = false
-		humanSettingsContainer.Visible = false
 	end
 	
 	if not config.autoType then
@@ -2079,8 +1712,6 @@ autoTypeV2Toggle.MouseButton1Click:Connect(function()
 	autoTypeV2Toggle.Text = config.autoTypeV2 and "On" or "Off"
 	
 	v2MinMaxRow.Visible = config.autoTypeV2
-	v2MoreRandomRow.Visible = config.autoTypeV2
-	v2MoreHumanRow.Visible = config.autoTypeV2
 	
 	if config.autoTypeV2 and config.autoType then
 		config.autoType = false
@@ -2089,7 +1720,6 @@ autoTypeV2Toggle.MouseButton1Click:Connect(function()
 	
 	if not config.autoTypeV2 then
 		clearTypedContinuation()
-		humanSettingsContainer.Visible = false
 	end
 end)
 
@@ -2105,99 +1735,8 @@ v2MaxInput.FocusLost:Connect(function()
 	v2MaxInput.Text = tostring(config.autoTypeV2Max)
 end)
 
-v2MoreRandomToggle.MouseButton1Click:Connect(function()
-	config.autoTypeV2MoreRandom = not config.autoTypeV2MoreRandom
-	v2MoreRandomToggle.Text = config.autoTypeV2MoreRandom and "On" or "Off"
-	lastV2TypeTimes = {}
-	
-	if config.autoTypeV2MoreRandom and config.autoTypeV2MoreHuman then
-		config.autoTypeV2MoreHuman = false
-		v2MoreHumanToggle.Text = "Off"
-		humanSettingsContainer.Visible = false
-	end
-end)
-
-v2MoreHumanToggle.MouseButton1Click:Connect(function()
-	config.autoTypeV2MoreHuman = not config.autoTypeV2MoreHuman
-	v2MoreHumanToggle.Text = config.autoTypeV2MoreHuman and "On" or "Off"
-	
-	humanSettingsContainer.Visible = config.autoTypeV2MoreHuman
-	
-	if config.autoTypeV2MoreHuman and config.autoTypeV2MoreRandom then
-		config.autoTypeV2MoreRandom = false
-		v2MoreRandomToggle.Text = "Off"
-	end
-end)
-
-humanPauseInput.FocusLost:Connect(function()
-	local v = tonumber(humanPauseInput.Text)
-	if v and v >= 0 and v <= 100 then
-		config.humanPauseChance = v / 100
-	end
-	humanPauseInput.Text = tostring(config.humanPauseChance * 100)
-end)
-
-humanPauseMultInput.FocusLost:Connect(function()
-	local v = tonumber(humanPauseMultInput.Text)
-	if v and v >= 1 then
-		config.humanPauseMultiplier = v
-	end
-	humanPauseMultInput.Text = tostring(config.humanPauseMultiplier)
-end)
-
-humanFlowInput.FocusLost:Connect(function()
-	local v = tonumber(humanFlowInput.Text)
-	if v and v >= 0 and v <= 100 then
-		config.humanFlowChance = v / 100
-	end
-	humanFlowInput.Text = tostring(config.humanFlowChance * 100)
-end)
-
-humanFlowMultInput.FocusLost:Connect(function()
-	local v = tonumber(humanFlowMultInput.Text)
-	if v and v > 0 and v <= 1 then
-		config.humanFlowMultiplier = v
-	end
-	humanFlowMultInput.Text = tostring(config.humanFlowMultiplier)
-end)
-
-humanBurstInput.FocusLost:Connect(function()
-	local v = tonumber(humanBurstInput.Text)
-	if v and v >= 0 and v <= 100 then
-		config.humanBurstChance = v / 100
-	end
-	humanBurstInput.Text = tostring(config.humanBurstChance * 100)
-end)
-
-humanBurstLenInput.FocusLost:Connect(function()
-	local v = tonumber(humanBurstLenInput.Text)
-	if v and v >= 1 and v <= 10 then
-		config.humanBurstLength = math.floor(v)
-	end
-	humanBurstLenInput.Text = tostring(config.humanBurstLength)
-end)
-
-humanBurstSpeedInput.FocusLost:Connect(function()
-	local v = tonumber(humanBurstSpeedInput.Text)
-	if v and v > 0 and v <= 1 then
-		config.humanBurstSpeed = v
-	end
-	humanBurstSpeedInput.Text = tostring(config.humanBurstSpeed)
-end)
-
-humanMistakeInput.FocusLost:Connect(function()
-	local v = tonumber(humanMistakeInput.Text)
-	if v and v >= 0 and v <= 100 then
-		config.humanMistakeChance = v / 100
-	end
-	humanMistakeInput.Text = tostring(config.humanMistakeChance * 100)
-end)
-
 nextButton.MouseButton1Click:Connect(function()
 	if #currentMatches > 0 then
-		if currentMatches[matchIndex] then
-			addToHistory(currentMatches[matchIndex], "Skipped")
-		end
 		matchIndex = matchIndex + 1
 		if matchIndex > #currentMatches then matchIndex = 1 end
 		wordLabel.Text = currentMatches[matchIndex]
@@ -2209,7 +1748,7 @@ typeButton.MouseButton1Click:Connect(function()
 	if #currentMatches == 0 or lastPrefix == "" then return end
 	local word = currentMatches[matchIndex]
 	task.spawn(function()
-		typeContinuation(word, lastPrefix, false)
+		typeContinuation(word, lastPrefix, config.autoTypeV2)
 		if config.antiDupe then usedWords[word] = true end
 		if config.autoDone then schedulePressDone() end
 	end)
@@ -2265,7 +1804,7 @@ saveConfigButton.MouseButton1Click:Connect(function()
 	end)
 end)
 
-loadConfigButton.MouseButton1Click:Connect(function()
+loadConfigFromFile = function(silent)
 	local success, result = pcall(function()
 		return readfile("WordHelperConfig.txt")
 	end)
@@ -2284,6 +1823,7 @@ loadConfigButton.MouseButton1Click:Connect(function()
 				end
 			end
 			
+			-- Update all UI elements
 			delayInput.Text = tostring(config.typingDelay)
 			startDelayInput.Text = tostring(config.startDelay)
 			randomToggleButton.Text = config.randomizeTyping and "On" or "Off"
@@ -2298,22 +1838,23 @@ loadConfigButton.MouseButton1Click:Connect(function()
 			autoTypeV2Toggle.Text = config.autoTypeV2 and "On" or "Off"
 			v2MinInput.Text = tostring(config.autoTypeV2Min)
 			v2MaxInput.Text = tostring(config.autoTypeV2Max)
-			v2MoreRandomToggle.Text = config.autoTypeV2MoreRandom and "On" or "Off"
-			v2MoreHumanToggle.Text = config.autoTypeV2MoreHuman and "On" or "Off"
-			humanPauseInput.Text = tostring(config.humanPauseChance * 100)
-			humanPauseMultInput.Text = tostring(config.humanPauseMultiplier)
-			humanFlowInput.Text = tostring(config.humanFlowChance * 100)
-			humanFlowMultInput.Text = tostring(config.humanFlowMultiplier)
-			humanBurstInput.Text = tostring(config.humanBurstChance * 100)
-			humanBurstLenInput.Text = tostring(config.humanBurstLength)
-			humanBurstSpeedInput.Text = tostring(config.humanBurstSpeed)
-			humanMistakeInput.Text = tostring(config.humanMistakeChance * 100)
 			longestToggle.Text = longest and "On" or "Off"
 			v2MinMaxRow.Visible = config.autoTypeV2
-			v2MoreRandomRow.Visible = config.autoTypeV2
-			v2MoreHumanRow.Visible = config.autoTypeV2
-			humanSettingsContainer.Visible = config.autoTypeV2MoreHuman
 			acrylicToggle.Text = config.acrylic and "On" or "Off"
+			autoLoadToggle.Text = config.autoLoadConfig and "On" or "Off"
+			
+			humanToggle.Text = config.humanTyping and "On" or "Off"
+			humanSettingsContainer.Visible = config.humanTyping
+			baseSpeedInput.Text = tostring(config.humanBaseSpeed)
+			variationInput.Text = tostring(config.humanVariation)
+			pauseChanceInput.Text = tostring(config.humanPauseChance * 100)
+			pauseMinInput.Text = tostring(config.humanPauseMin)
+			pauseMaxInput.Text = tostring(config.humanPauseMax)
+			burstChanceInput.Text = tostring(config.humanBurstChance * 100)
+			burstSpeedInput.Text = tostring(config.humanBurstSpeed)
+			fatigueToggle.Text = config.humanFatigue and "On" or "Off"
+			fatigueRateInput.Text = tostring(config.humanFatigueRate)
+			fatigueRateRow.Visible = config.humanFatigue
 			
 			applyTheme(config.theme)
 			frame.BackgroundTransparency = config.transparency
@@ -2329,38 +1870,42 @@ loadConfigButton.MouseButton1Click:Connect(function()
 					acrylicFrame.BackgroundTransparency = 0.92
 					acrylicFrame.BorderSizePixel = 0
 					acrylicFrame.ZIndex = 1
-					Instance.new("UICorner", acrylicFrame).CornerRadius = UDim.new(0, 10)
+					
+					local acrylicCorner = Instance.new("UICorner", acrylicFrame)
+					acrylicCorner.CornerRadius = UDim.new(0, 14)
+					
+					local acrylicBlur = Instance.new("BlurEffect", acrylicFrame)
+					acrylicBlur.Size = 8
 				end
 				acrylicFrame.Visible = true
-				
-				if not acrylicBlur then
-					acrylicBlur = Instance.new("BlurEffect", workspace.CurrentCamera)
-					acrylicBlur.Name = "WordHelperAcrylic"
-				end
-				acrylicBlur.Size = 6
-				acrylicBlur.Enabled = true
 			else
 				if acrylicFrame then
 					acrylicFrame.Visible = false
 				end
-				
-				if acrylicBlur then
-					acrylicBlur.Enabled = false
-				end
 			end
 			
-			loadConfigButton.Text = "Loaded!"
-			task.delay(1, function()
-				loadConfigButton.Text = "Load Config"
-			end)
+			if not silent then
+				loadConfigButton.Text = "Loaded!"
+				task.delay(1, function()
+					loadConfigButton.Text = "Load Config"
+				end)
+			end
 		else
-			loadConfigButton.Text = "Fail"
-			task.delay(1, function() loadConfigButton.Text = "Load Config" end)
+			if not silent then
+				loadConfigButton.Text = "Fail"
+				task.delay(1, function() loadConfigButton.Text = "Load Config" end)
+			end
 		end
 	else
-		loadConfigButton.Text = "No File"
-		task.delay(1, function() loadConfigButton.Text = "Load Config" end)
+		if not silent then
+			loadConfigButton.Text = "No File"
+			task.delay(1, function() loadConfigButton.Text = "Load Config" end)
+		end
 	end
+end
+
+loadConfigButton.MouseButton1Click:Connect(function()
+	loadConfigFromFile(false)
 end)
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -2370,7 +1915,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		local word = currentMatches[matchIndex]
 		if config.antiDupe and usedWords[word] then return end
 		task.spawn(function()
-			typeContinuation(word, lastPrefix, false)
+			typeContinuation(word, lastPrefix, config.autoTypeV2 or config.humanTyping)
 			if config.antiDupe then usedWords[word] = true end
 			if config.autoDone then schedulePressDone() end
 		end)
@@ -2418,7 +1963,7 @@ local function startAutoTypeIfNeeded()
 		if not checkInGameAutoCondition() then autoTypePending = false return end
 		if config.antiDupe and usedWords[word] then autoTypePending = false return end
 		
-		typeContinuation(word, lastPrefix, config.autoTypeV2)
+		typeContinuation(word, lastPrefix, config.autoTypeV2 or config.humanTyping)
 		
 		if config.antiDupe then usedWords[word] = true end
 		if config.autoDone then schedulePressDone() end
