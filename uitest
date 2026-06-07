@@ -948,18 +948,20 @@ function unknown:MakeWindow(WindowConfig)
 
 	-- Tab switch animation
 	local function SwitchTabAnimated(oldContainer, newContainer)
+		-- Always hide every container first so none bleed through
+		for _, c in next, MainWindow:GetChildren() do
+			if c.Name == "ItemContainer" and c ~= newContainer then
+				c.Visible = false
+				c.BackgroundTransparency = 0
+			end
+		end
 		if not oldContainer or oldContainer == newContainer then
 			if newContainer then newContainer.Visible = true end
 			return
 		end
-		TweenService:Create(oldContainer, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
-		task.delay(0.1, function()
-			oldContainer.Visible = false
-			oldContainer.BackgroundTransparency = 0
-			newContainer.BackgroundTransparency = 1
-			newContainer.Visible = true
-			TweenService:Create(newContainer, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
-		end)
+		newContainer.BackgroundTransparency = 1
+		newContainer.Visible = true
+		TweenService:Create(newContainer, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
 	end
 
 	local CurrentContainer = nil
@@ -1019,6 +1021,7 @@ function unknown:MakeWindow(WindowConfig)
 			TabFrame.Title.TextTransparency = 0
 			TabFrame.Title.Font = Enum.Font.GothamBlack
 			Container.Visible = true
+			CurrentContainer = Container  -- track so tab-switch can hide it later
 		end
 
 		local function SwitchToTab()
