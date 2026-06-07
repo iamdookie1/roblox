@@ -1,6 +1,6 @@
 # Unknown UI Library
 
-A lightweight, feature-rich Roblox UI library designed for script interfaces. Supports theming, mobile drag, config saving, element locking, multi-select dropdowns, progress bars, notifications with types, and more.
+A lightweight, feature-rich Roblox UI library designed for executor script interfaces. Supports 8 built-in themes, mobile drag, config saving, element locking, multi-select dropdowns, progress bars, typed notifications, and more.
 
 ---
 
@@ -31,12 +31,11 @@ A lightweight, feature-rich Roblox UI library designed for script interfaces. Su
 - [Themes](#themes)
 - [Config System](#config-system)
 - [Global Methods](#global-methods)
+- [Full Example](#full-example)
 
 ---
 
 ## Loading
-
-Load the library via `loadstring` from wherever you host `source.txt` / the compiled file:
 
 ```lua
 local unknown = loadstring(game:HttpGetAsync("YOUR_RAW_URL_HERE"))()
@@ -48,74 +47,72 @@ local unknown = loadstring(game:HttpGetAsync("YOUR_RAW_URL_HERE"))()
 
 ### MakeWindow Options
 
-Creates the main UI window. Returns a `TabFunction` object used to create tabs and call window methods.
+Creates the main UI window. Returns a `Window` object used to create tabs and call window-level methods.
 
 ```lua
 local Window = unknown:MakeWindow({
-    Name              = "My Script",       -- Window title shown in the top bar
-    IntroEnabled      = true,              -- Show the animated intro splash on open
-    IntroText         = "My Script",       -- Text shown during the intro sequence
-    IntroIcon         = "rbxassetid://...",-- Icon shown during the intro sequence
-    ShowIcon          = false,             -- Show an icon next to the title in the top bar
-    Icon              = "rbxassetid://...",-- Icon asset shown in top bar (requires ShowIcon = true)
-    Theme             = "Default",         -- Starting theme name (see Themes section)
-    DefaultTab        = "Main",            -- Tab name to open on start; falls back to first tab if nil or invalid
-    SaveConfig        = false,             -- Enable config auto-save/load
-    ConfigFolder      = "MyScript",        -- Folder name used to store config files
-    ConfigName        = "12345678",        -- Config file name (defaults to game.GameId)
-    Transparent       = false,             -- Enable background transparency
-    TransparencyAmount = 0.3,             -- Transparency level (0.0 = opaque, 0.7 = max allowed)
-    Blur              = false,             -- Add a BlurEffect to Lighting when window opens
-    MinSize           = Vector2.new(400, 280), -- Minimum window size when resizing
-    MaxSize           = Vector2.new(900, 600), -- Maximum window size when resizing
-    CloseCallback     = function() end,    -- Called when the close button is pressed
+    Name              = "My Script",
+    IntroEnabled      = true,
+    IntroText         = "My Script",
+    IntroIcon         = "rbxassetid://8834748103",
+    ShowIcon          = false,
+    Icon              = "rbxassetid://8834748103",
+    Theme             = "Default",
+    DefaultTab        = "Main",
+    SaveConfig        = true,
+    ConfigFolder      = "MyScript",
+    ConfigName        = "profile1",
+    Transparent       = false,
+    TransparencyAmount = 0.3,
+    Blur              = false,
+    MinSize           = Vector2.new(400, 280),
+    MaxSize           = Vector2.new(900, 600),
+    CloseCallback     = function() end,
 })
 ```
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `Name` | string | `"Unknown Library"` | Window title |
-| `IntroEnabled` | bool | `true` | Show splash intro |
-| `IntroText` | string | `"Unknown Library"` | Intro splash text |
-| `IntroIcon` | string | built-in | Asset ID for intro icon |
-| `ShowIcon` | bool | `false` | Show icon in top bar |
-| `Icon` | string | built-in | Top bar icon asset ID |
-| `Theme` | string | `"Default"` | Starting theme |
-| `DefaultTab` | string | `nil` | Tab to activate on open |
-| `SaveConfig` | bool | `false` | Enable config persistence |
-| `ConfigFolder` | string | `Name` | Save folder name |
-| `ConfigName` | string | `game.GameId` | Config file name |
-| `Transparent` | bool | `false` | Window transparency |
-| `TransparencyAmount` | number | `0` | 0.0–0.7 transparency level |
-| `Blur` | bool | `false` | Blur background via Lighting |
-| `MinSize` | Vector2 | `(400, 280)` | Minimum resize dimensions |
-| `MaxSize` | Vector2 | `(900, 600)` | Maximum resize dimensions |
-| `CloseCallback` | function | `function()end` | Fired on window close |
+| `Name` | string | `"Unknown Library"` | Window title in the top bar |
+| `IntroEnabled` | bool | `true` | Play the animated intro splash on open |
+| `IntroText` | string | `"Unknown Library"` | Text shown during the intro |
+| `IntroIcon` | string | built-in | Asset ID for the intro icon |
+| `ShowIcon` | bool | `false` | Show an icon beside the window title |
+| `Icon` | string | built-in | Top-bar icon asset ID (requires `ShowIcon = true`) |
+| `Theme` | string | `"Default"` | Starting theme — see [Themes](#themes) |
+| `DefaultTab` | string | `nil` | Tab name to open first; falls back to first tab if nil or invalid |
+| `SaveConfig` | bool | `false` | Enable config auto-save/load |
+| `ConfigFolder` | string | `Name` | Folder name used to store config files |
+| `ConfigName` | string | `game.GameId` | Config filename (without `.txt`) |
+| `Transparent` | bool | `false` | Enable window background transparency |
+| `TransparencyAmount` | number | `0` | Transparency level: `0.0` (solid) to `0.7` (max, never fully invisible) |
+| `Blur` | bool | `false` | Apply a `BlurEffect` to Lighting while the window is open. Removed automatically on close, restored on reopen. |
+| `MinSize` | Vector2 | `(400, 280)` | Minimum window size when resizing |
+| `MaxSize` | Vector2 | `(900, 600)` | Maximum window size when resizing |
+| `CloseCallback` | function | `function()end` | Called when the close button is pressed |
 
-**Resize:** A drag handle appears at the bottom-right corner of the window. Drag it to resize between `MinSize` and `MaxSize`. Works on both mouse and touch.
+**Resize:** A drag handle sits at the bottom-right corner. Drag it to resize between `MinSize` and `MaxSize`. Works on mouse and touch.
 
-**Close / Reopen:** The close button hides the window. Press **RightShift** to reopen it.
+**Close / Reopen:** Pressing the close (×) button hides the window. Press **RightShift** to reopen it. Blur is removed on hide and restored on reopen.
 
-**Minimize:** The minimize button collapses the window to just the title bar.
+**Minimize:** The minimize button collapses the window to the title bar.
 
 ---
 
 ### Window Methods
 
-Methods are called on the `Window` object returned by `MakeWindow`.
+```lua
+Window:SetTab("Settings")       -- switch to a tab by name
+Window:WindowLocked(true)       -- hide close/minimize and disable drag
+Window:WindowLocked(false)      -- restore close/minimize and drag
+```
 
 #### `Window:SetTab(name)`
-Switches the active tab to the one with the given name. If the name does not match any tab, the first tab is selected instead.
-```lua
-Window:SetTab("Settings")
-```
+Switches the active tab to the one matching `name`. If the name doesn't match any tab or the tab is locked, the first accessible tab is used instead.
 
-#### `Window:WindowLocked(locked)`
-When `true`, hides the close and minimize buttons and disables dragging. When `false`, restores them.
-```lua
-Window:WindowLocked(true)   -- lock
-Window:WindowLocked(false)  -- unlock
-```
+#### `Window:WindowLocked(bool)`
+`true` — hides close and minimize buttons and disables window dragging.  
+`false` — restores them.
 
 ---
 
@@ -123,486 +120,475 @@ Window:WindowLocked(false)  -- unlock
 
 ### MakeTab Options
 
-Creates a tab in the left sidebar. Returns an element function table used to add elements.
-
 ```lua
 local Tab = Window:MakeTab({
-    Name   = "Main",           -- Tab label
-    Icon   = "home",           -- Lucide icon name or rbxassetid:// string
-    Locked = false,            -- Lock the tab on creation (dims it, blocks access)
+    Name   = "Main",
+    Icon   = "home",
+    Locked = false,
 })
 ```
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `Name` | string | `"Tab"` | Tab label |
-| `Icon` | string | `""` | Lucide icon name or asset ID |
-| `Locked` | bool | `false` | Lock the tab by default |
+| `Name` | string | `"Tab"` | Tab label shown in the sidebar |
+| `Icon` | string | `""` | Lucide icon name (e.g. `"home"`, `"settings"`) or `rbxassetid://...` |
+| `Locked` | bool | `false` | Lock the tab on creation |
 
-**Icons:** Pass any [Lucide](https://lucide.dev) icon name as a string (e.g. `"home"`, `"settings"`, `"shield"`). Asset IDs (`"rbxassetid://..."`) are also supported.
+**Icons:** Pass any name from [lucide.dev](https://lucide.dev) as a plain string. Asset IDs work too.
 
-**Locked tabs:** When a tab is locked, its label and icon are dimmed to 70% transparency, a lock icon appears on the right, and clicking it does nothing. Elements inside a locked tab cannot be interacted with. Config values for flags inside a locked tab are not loaded until the tab is unlocked.
+**Locked tab behaviour:** The tab is dimmed to 70% transparency, a lock icon appears on the right, clicking it does nothing, and config values for flags inside it are not loaded until unlocked.
 
 ---
 
 ### Tab Methods
 
-#### `Tab:SetLocked(locked)`
-Lock or unlock the tab at runtime.
-- `true` — dims the tab, blocks access, hides config loading for its flags
-- `false` — restores the tab, re-enables interaction, triggers a config load for its flags
 ```lua
-Tab:SetLocked(true)   -- lock
-Tab:SetLocked(false)  -- unlock (triggers config load for this tab's flags)
+Tab:SetLocked(true)    -- lock: dims tab, blocks access, pauses config load
+Tab:SetLocked(false)   -- unlock: restores tab, triggers config load for its flags
 ```
 
 ---
 
 ## Elements
 
-All elements are added by calling methods on a `Tab` or `Section` object.
+All elements are created by calling methods on a `Tab` or `Section` object.
 
 ---
 
 ### Label
 
-A read-only text row.
+Read-only text row.
 
 ```lua
-local Label = Tab:AddLabel("Hello World")
+local Lbl = Tab:AddLabel("Status: Ready")
+
+Lbl:Set("Status: Running")
 ```
 
-**Returns:**
-
-| Method | Description |
+| Returns | Description |
 |---|---|
-| `Label:Set(text)` | Update the label text |
+| `:Set(text)` | Update the label text |
 
 ---
 
 ### Paragraph
 
-A two-line display with a bold title and wrapped body text.
+Bold title with a word-wrapped body below.
 
 ```lua
-local Para = Tab:AddParagraph("Title", "This is the body content.")
+local Para = Tab:AddParagraph("How to use", "Press the buttons below to activate features. Hold Q to sprint.")
+
+Para:Set("Updated description.")
 ```
 
-| Parameter | Type | Description |
-|---|---|---|
-| `Text` | string | Bold title text |
-| `Content` | string | Body text (word-wrapped, auto-sizes) |
-
-**Returns:**
-
-| Method | Description |
+| Parameter | Description |
 |---|---|
-| `Para:Set(text)` | Update the body content text |
+| `Text` | Bold title |
+| `Content` | Body text (word-wrapped, auto-sizes height) |
+
+| Returns | Description |
+|---|---|
+| `:Set(text)` | Update the body content |
 
 ---
 
 ### Button
 
-A clickable row that fires a callback.
+Clickable row that fires a callback. Supports locking.
 
 ```lua
 local Btn = Tab:AddButton({
-    Name     = "Click Me",
+    Name     = "Teleport to Spawn",
     Callback = function()
-        print("Clicked!")
+        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame =
+            CFrame.new(0, 5, 0)
     end,
-    Icon     = "rbxassetid://3944703587",  -- optional right-side icon
-    Locked   = false,                       -- lock the button on creation
+    Icon   = "rbxassetid://3944703587",
+    Locked = false,
 })
+
+Btn:Set("New Label")
+Btn:ButtonLocked(true)   -- darken, show lock icon, block callback
+Btn:ButtonLocked(false)  -- revert
 ```
 
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `Name` | string | `"Button"` | Button label |
-| `Callback` | function | `function()end` | Fired when clicked |
+| `Callback` | function | `function()end` | Fired on click |
 | `Icon` | string | built-in | Right-side icon asset ID |
-| `Locked` | bool | `false` | Locked on creation |
+| `Locked` | bool | `false` | Lock on creation |
 
-**Returns:**
-
-| Method | Description |
+| Returns | Description |
 |---|---|
-| `Btn:Set(text)` | Update the button label |
-| `Btn:ButtonLocked(bool)` | Lock (`true`) or unlock (`false`) the button at runtime |
-
-**Locking:** When locked, the button darkens, a lock icon appears, and the callback is blocked. Unlocking reverts all of this.
+| `:Set(text)` | Update the button label |
+| `:ButtonLocked(bool)` | Lock or unlock at runtime |
+| `.Locked` | Current lock state |
 
 ---
 
 ### Toggle
 
-An on/off toggle with an animated checkbox.
+On/off toggle with an animated checkbox. Supports locking.
 
 ```lua
 local Toggle = Tab:AddToggle({
-    Name     = "Enable Feature",
+    Name     = "God Mode",
     Default  = false,
-    Color    = Color3.fromRGB(9, 99, 195),  -- checkbox color when on
-    Locked   = false,                        -- lock the toggle on creation
-    Flag     = "myToggle",                   -- key used for config saving
-    Save     = false,                        -- persist value in config
-    OnLoad   = function(value)               -- called when config loads this flag
-        print("Loaded:", value)
-    end,
-    Callback = function(value)
-        print("Toggle is now:", value)
+    Color    = Color3.fromRGB(9, 99, 195),
+    Locked   = false,
+    Flag     = "godMode",
+    Save     = true,
+    OnLoad   = function(v) print("Loaded god mode:", v) end,
+    Callback = function(v)
+        game.Players.LocalPlayer.Character.Humanoid.MaxHealth = v and math.huge or 100
     end,
 })
+
+Toggle:Set(true)
+Toggle:ToggleLocked(true)   -- darken + disable
+Toggle:ToggleLocked(false)  -- revert + re-enable
 ```
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `Name` | string | `"Toggle"` | Toggle label |
+| `Name` | string | `"Toggle"` | Label |
 | `Default` | bool | `false` | Starting state |
 | `Color` | Color3 | Blue | Checkbox color when enabled |
-| `Locked` | bool | `false` | Locked on creation |
-| `Flag` | string | `nil` | Config key |
-| `Save` | bool | `false` | Save to config |
-| `OnLoad` | function | `nil` | Fired after config loads this value |
-| `Callback` | function | `function()end` | Fired on state change |
+| `Locked` | bool | `false` | Lock on creation |
+| `Flag` | string | `nil` | Config save key |
+| `Save` | bool | `false` | Persist in config |
+| `OnLoad` | function | `nil` | Called when config loads this value |
+| `Callback` | function | `function()end` | Called on state change |
 
-**Returns:**
-
-| Method / Property | Description |
+| Returns | Description |
 |---|---|
-| `Toggle:Set(bool)` | Set the toggle state programmatically |
-| `Toggle:ToggleLocked(bool)` | Lock (`true`) darkens and disables; unlock (`false`) reverts and re-enables |
-| `Toggle.Value` | Current boolean state |
-| `Toggle.Locked` | Whether the toggle is currently locked |
-
-**Locking:** When locked, the toggle frame darkens, the checkbox dims, and clicking does nothing. Config loading is blocked for this flag while locked.
+| `:Set(bool)` | Set state programmatically |
+| `:ToggleLocked(bool)` | Lock or unlock at runtime |
+| `.Value` | Current state |
+| `.Locked` | Current lock state |
 
 ---
 
 ### Slider
 
-A draggable value slider with a colored fill bar.
+Draggable value bar with a colored fill.
 
 ```lua
 local Slider = Tab:AddSlider({
-    Name      = "Speed",
-    Min       = 0,
-    Max       = 100,
-    Default   = 50,
+    Name      = "Walk Speed",
+    Min       = 16,
+    Max       = 250,
+    Default   = 16,
     Increment = 1,
-    ValueName = "studs/s",               -- appended to the displayed value
+    ValueName = "stud/s",
     Color     = Color3.fromRGB(9, 149, 98),
-    Flag      = "speedSlider",
-    Save      = false,
-    OnLoad    = function(value) end,
-    Callback  = function(value)
-        print("Speed:", value)
+    Flag      = "walkSpeed",
+    Save      = true,
+    OnLoad    = function(v) print("Loaded speed:", v) end,
+    Callback  = function(v)
+        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = v
     end,
 })
+
+Slider:Set(100)
+print(Slider.Value)
 ```
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `Name` | string | `"Slider"` | Slider label |
+| `Name` | string | `"Slider"` | Label |
 | `Min` | number | `0` | Minimum value |
 | `Max` | number | `100` | Maximum value |
 | `Default` | number | `50` | Starting value |
 | `Increment` | number | `1` | Snap interval |
 | `ValueName` | string | `""` | Suffix shown after the number |
 | `Color` | Color3 | Green | Fill bar color |
-| `Flag` | string | `nil` | Config key |
-| `Save` | bool | `false` | Save to config |
-| `OnLoad` | function | `nil` | Fired after config loads this value |
-| `Callback` | function | `function()end` | Fired on value change |
+| `Flag` | string | `nil` | Config save key |
+| `Save` | bool | `false` | Persist in config |
+| `OnLoad` | function | `nil` | Called when config loads this value |
+| `Callback` | function | `function()end` | Called on value change |
 
-**Returns:**
-
-| Method / Property | Description |
+| Returns | Description |
 |---|---|
-| `Slider:Set(number)` | Set the slider value programmatically |
-| `Slider.Value` | Current value |
+| `:Set(number)` | Set value programmatically |
+| `.Value` | Current value |
 
 ---
 
 ### Dropdown
 
-An expandable option list. Supports single-select and multi-select modes. Individual options can be disabled.
+Expandable option list. Supports single-select, multi-select, and disabled options.
 
 ```lua
 -- Single select
 local DD = Tab:AddDropdown({
-    Name            = "Choose Mode",
-    Options         = {"Option A", "Option B", "Option C"},
-    Default         = "Option A",
-    DisabledOptions = {"Option C"},    -- greyed out, unclickable
+    Name            = "Game Mode",
+    Options         = {"Normal", "Hard", "Extreme", "Debug"},
+    Default         = "Normal",
+    DisabledOptions = {"Debug"},
     IsMulti         = false,
-    Flag            = "modeDropdown",
-    Save            = false,
-    OnLoad          = function(value) end,
-    Callback        = function(value)
-        print("Selected:", value)
+    Flag            = "gameMode",
+    Save            = true,
+    Callback        = function(selected)
+        print("Mode:", selected)
     end,
 })
 
 -- Multi select
-local DDMulti = Tab:AddDropdown({
-    Name    = "Select Items",
-    Options = {"Sword", "Shield", "Bow"},
+local MultiDD = Tab:AddDropdown({
+    Name    = "Active Hacks",
+    Options = {"Aimbot", "ESP", "Speed", "Fly"},
     IsMulti = true,
     Callback = function(tbl)
-        -- tbl is a dictionary: { ["Sword"] = true, ["Bow"] = true }
-        for item in pairs(tbl) do
-            print("Selected:", item)
+        for hack in pairs(tbl) do
+            print("Active:", hack)
         end
     end,
 })
+
+DD:Set("Hard")
+MultiDD:Set({"ESP", "Fly"})
+DD:Refresh({"Normal", "Hard"}, true)  -- replace options
 ```
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `Name` | string | `"Dropdown"` | Dropdown label |
-| `Options` | table | `{}` | List of option strings |
-| `Default` | string | `""` | Pre-selected option (single mode) |
-| `DisabledOptions` | table | `{}` | Options to grey out and block |
-| `IsMulti` | bool | `false` | Enable multi-select mode |
-| `Flag` | string | `nil` | Config key |
-| `Save` | bool | `false` | Save to config |
-| `OnLoad` | function | `nil` | Fired after config loads this value |
-| `Callback` | function | `function()end` | Fired on selection change |
+| `Name` | string | `"Dropdown"` | Label |
+| `Options` | table | `{}` | Array of option strings |
+| `Default` | string | `""` | Pre-selected option (single mode only) |
+| `DisabledOptions` | table | `{}` | Options to grey out — unclickable |
+| `IsMulti` | bool | `false` | Multi-select mode |
+| `Flag` | string | `nil` | Config save key |
+| `Save` | bool | `false` | Persist in config |
+| `OnLoad` | function | `nil` | Called when config loads this value |
+| `Callback` | function | `function()end` | Called on change |
 
-**Single-select value:** a `string`.
-**Multi-select value:** a dictionary `{ [optionName] = true }` for each selected option. The header shows `"N selected"` when more than one option is active.
+**Single-select value:** `string`.  
+**Multi-select value:** `{ [option] = true }` dictionary. Header shows `"N selected"` for N > 1.
 
-**Returns:**
-
-| Method | Description |
+| Returns | Description |
 |---|---|
-| `DD:Set(value)` | Set selected value — string for single, table array for multi |
-| `DD:Refresh(options, deleteOld)` | Replace or append options. `deleteOld = true` clears existing options first |
+| `:Set(value)` | Set selected value — string for single, array table for multi |
+| `:Refresh(options, deleteOld)` | Replace or append options; `deleteOld = true` clears existing first |
 
 ---
 
 ### Bind
 
-A keybind element. Click it to enter binding mode, then press any key or mouse button to assign.
+Keybind element. Click to enter binding mode, press any key or mouse button to assign.
 
 ```lua
 local Bind = Tab:AddBind({
-    Name     = "Toggle UI",
-    Default  = Enum.KeyCode.RightShift,
-    Hold     = false,      -- if true, callback fires on hold start and hold end
-    Flag     = "uiBind",
-    Save     = false,
+    Name     = "Toggle Fly",
+    Default  = Enum.KeyCode.F,
+    Hold     = false,
+    Flag     = "flyBind",
+    Save     = true,
     Callback = function()
-        print("Bind triggered!")
+        print("Fly toggled")
     end,
-    -- Hold mode callback receives a bool:
-    -- Callback = function(holding) print(holding) end
+    -- For Hold mode:
+    -- Callback = function(holding) print("Holding:", holding) end
 })
+
+Bind:Set(Enum.KeyCode.G)
+print(Bind.Value)  -- "G"
 ```
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `Name` | string | `"Bind"` | Bind label |
+| `Name` | string | `"Bind"` | Label |
 | `Default` | KeyCode / UserInputType | `Unknown` | Default key |
-| `Hold` | bool | `false` | Fire callback on hold and release instead of tap |
-| `Flag` | string | `nil` | Config key |
-| `Save` | bool | `false` | Save to config |
-| `Callback` | function | `function()end` | Fired on key press (or hold/release if `Hold = true`) |
+| `Hold` | bool | `false` | Fires callback with `true` on hold start, `false` on release |
+| `Flag` | string | `nil` | Config save key |
+| `Save` | bool | `false` | Persist in config |
+| `Callback` | function | `function()end` | Fired on press (or hold/release if `Hold = true`) |
 
-**Blacklisted keys** (cannot be bound): W, A, S, D, arrow keys, Slash, Tab, Backspace, Escape, Unknown.
+**Blacklisted keys (cannot be bound):** WASD, arrow keys, Slash, Tab, Backspace, Escape, Unknown.
 
-**Returns:**
-
-| Method / Property | Description |
+| Returns | Description |
 |---|---|
-| `Bind:Set(key)` | Set the bind key (KeyCode or UserInputType) |
-| `Bind.Value` | Current bound key name string |
-| `Bind.Binding` | `true` while waiting for a key press to assign |
+| `:Set(key)` | Set bind key (KeyCode or UserInputType) |
+| `.Value` | Current bound key name |
+| `.Binding` | `true` while waiting for input |
 
 ---
 
 ### Textbox
 
-An inline text input that expands as text grows.
+Inline text input box that grows with content.
 
 ```lua
-Tab:AddTextbox({
-    Name          = "Player Name",
+local TB = Tab:AddTextbox({
+    Name          = "Target Player",
     Default       = "",
-    PlaceholderText = "Input",      -- shown when empty
-    TextDisappear = false,          -- clear text after focus lost
+    TextDisappear = false,
     Callback      = function(text)
         print("Entered:", text)
     end,
 })
+
+TB:Set("Roblox")
+print(TB:Get())
 ```
 
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `Name` | string | `"Textbox"` | Label |
 | `Default` | string | `""` | Pre-filled text |
-| `TextDisappear` | bool | `false` | Clear text on focus lost |
-| `Callback` | function | `function()end` | Fired when focus is lost |
+| `TextDisappear` | bool | `false` | Clear text after focus is lost |
+| `Callback` | function | `function()end` | Called when focus is lost |
+
+| Returns | Description |
+|---|---|
+| `:Set(text)` | Set the textbox value |
+| `:Get()` | Get the current text |
 
 ---
 
 ### Colorpicker
 
-An expandable HSV color picker with a saturation/value field and a hue strip. Supports mouse and touch drag.
+Expandable HSV color picker. Supports mouse and touch drag.
 
 ```lua
 local CP = Tab:AddColorpicker({
-    Name     = "Highlight Color",
-    Default  = Color3.fromRGB(255, 0, 0),
-    Flag     = "highlightColor",
-    Save     = false,
-    OnLoad   = function(color) end,
+    Name     = "ESP Color",
+    Default  = Color3.fromRGB(255, 50, 50),
+    Flag     = "espColor",
+    Save     = true,
+    OnLoad   = function(c) print("Loaded color:", c) end,
     Callback = function(color)
-        print("Color:", color)
+        -- update ESP color
     end,
 })
+
+CP:Set(Color3.fromRGB(0, 255, 100))
+print(CP.Value)
 ```
 
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `Name` | string | `"Colorpicker"` | Label |
 | `Default` | Color3 | White | Starting color |
-| `Flag` | string | `nil` | Config key |
-| `Save` | bool | `false` | Save to config |
-| `OnLoad` | function | `nil` | Fired after config loads this value |
-| `Callback` | function | `function()end` | Fired on color change |
+| `Flag` | string | `nil` | Config save key |
+| `Save` | bool | `false` | Persist in config |
+| `OnLoad` | function | `nil` | Called when config loads this value |
+| `Callback` | function | `function()end` | Called on color change |
 
-Click the row to expand/collapse the picker. Drag the left panel for saturation/value, drag the right strip for hue.
+Click the row to expand or collapse the picker. Left panel = saturation/value, right strip = hue.
 
-**Returns:**
-
-| Method / Property | Description |
+| Returns | Description |
 |---|---|
-| `CP:Set(Color3)` | Set the color programmatically |
-| `CP.Value` | Current `Color3` value |
+| `:Set(Color3)` | Set the color programmatically |
+| `.Value` | Current `Color3` |
 
 ---
 
 ### Separator
 
-A thin horizontal divider line with an optional centered label.
+A thin horizontal divider. With a label the line breaks around it — left segment, text, right segment.
 
 ```lua
 -- Plain line
-local Sep = Tab:AddSeparator({})
+local Sep1 = Tab:AddSeparator({})
 
--- Labeled line
-local Sep = Tab:AddSeparator({
-    Name = "Advanced Options"
-})
+-- Labeled line — line breaks around the text
+local Sep2 = Tab:AddSeparator({ Name = "Advanced" })
+
+Sep2:Set("Expert Only")
 ```
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `Name` | string | `nil` | Optional centered label text |
+| `Name` | string | `nil` | Optional centered label — the line splits around it |
 
-**Returns:**
-
-| Method | Description |
+| Returns | Description |
 |---|---|
-| `Sep:Set(text)` | Update the separator label text |
+| `:Set(text)` | Update the label text at runtime |
 
 ---
 
 ### ProgressBar
 
-A fill bar with optional named steps and a current-action label.
+Fill bar with optional named steps and a current-step label.
 
 ```lua
 local Bar = Tab:AddProgressBar({
-    Name    = "Loading Assets",          -- required — displayed above the bar
-    Steps   = {                          -- optional step names (shown below bar)
-        "Connecting to server",
-        "Fetching data",
-        "Applying changes",
-        "Done"
-    },
-    Default = 1,                         -- starting step index (1-based)
+    Name    = "Loading",
+    Steps   = { "Connecting", "Fetching data", "Applying", "Done" },
+    Default = 1,
 })
 
--- Advance steps
-Bar:SetStep(2)   -- "Fetching data", bar fills to 33%
-Bar:SetStep(4)   -- "Done", bar fills to 100%
+-- Advance with buttons
+Tab:AddButton({ Name = "Next Step", Callback = function() Bar:SetStep(Bar.Value + 1) end })
+Tab:AddButton({ Name = "Reset",     Callback = function() Bar:SetStep(1) end })
 
--- Update title
-Bar:SetName("Installing Mods")
+Bar:SetStep(3)            -- "Applying" — bar fills to 66%
+Bar:SetName("Installing") -- update title
 ```
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `Name` | string | `""` | Title shown above the bar |
-| `Steps` | table | `{}` | Array of step name strings |
-| `Default` | number | `1` | Starting step index |
+| `Name` | string | `""` | Title shown above the bar (required for display) |
+| `Steps` | table | `{}` | Array of step name strings shown below the bar |
+| `Default` | number | `1` | Starting step index (1-based) |
 
-**Returns:**
-
-| Method / Property | Description |
+| Returns | Description |
 |---|---|
-| `Bar:SetStep(n)` | Move to step `n` (1-based). Tweens the fill and updates the step label. |
-| `Bar:SetName(text)` | Update the title label |
-| `Bar.Value` | Current step index |
-
-If `Steps` is empty, the bar still works — call `SetStep` with a 0–1 fraction manually by omitting the Steps table and driving `SetStep` yourself, or simply use it as a display-only bar with `SetName`.
+| `:SetStep(n)` | Move to step n — tweens fill, updates step label |
+| `:SetName(text)` | Update the title label |
+| `.Value` | Current step index |
 
 ---
 
 ### ThemeSwitcher
 
-A pre-built dropdown that lists all available themes and switches the UI theme live on select.
+Pre-built dropdown that lists all themes and switches the UI live on select.
 
 ```lua
 Tab:AddThemeSwitcher()
 ```
 
-No configuration required. The dropdown is automatically populated with all theme names and updates the entire UI when a new theme is selected.
+No configuration needed. Automatically includes all built-in and custom themes.
 
 ---
 
 ### Section
 
-A labeled group container. Visually separates elements within a tab. Elements added inside a section behave identically to elements added directly to a tab.
+A labeled group inside a tab. All element methods work identically inside a section.
 
 ```lua
-local Section = Tab:AddSection({
-    Name = "Combat Settings"
-})
+local Sec = Tab:AddSection({ Name = "Visuals" })
 
--- All normal element methods are available on a Section:
-Section:AddToggle({ Name = "Auto-Parry", ... })
-Section:AddSlider({ Name = "Attack Speed", ... })
-Section:AddButton({ Name = "Reset", ... })
--- etc.
+Sec:AddToggle({ Name = "ESP",   Callback = function(v) end })
+Sec:AddColorpicker({ Name = "ESP Color", Callback = function(c) end })
+Sec:AddSlider({ Name = "ESP Range", Min = 10, Max = 1000, Default = 500, Callback = function(v) end })
 ```
 
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `Name` | string | `"Section"` | Section header label |
 
-Sections support: `AddLabel`, `AddParagraph`, `AddButton`, `AddToggle`, `AddSlider`, `AddDropdown`, `AddBind`, `AddTextbox`, `AddColorpicker`, `AddSeparator`, `AddProgressBar`, `AddThemeSwitcher`.
+Sections support all elements: Label, Paragraph, Button, Toggle, Slider, Dropdown, Bind, Textbox, Colorpicker, Separator, ProgressBar, ThemeSwitcher.
 
 ---
 
 ## Notifications
 
-Display a temporary toast notification in the bottom-right corner.
+Toast notifications stacked in the bottom-right corner.
 
 ```lua
-local notif = unknown:MakeNotification({
-    Name    = "Success!",
-    Content = "The operation completed successfully.",
-    Image   = "rbxassetid://4384403532",  -- optional icon
-    Time    = 5,                           -- seconds before auto-dismiss
-    Type    = "Success",                   -- "Info" | "Success" | "Warning" | "Error"
+local n = unknown:MakeNotification({
+    Name    = "Done",
+    Content = "Operation completed successfully.",
+    Image   = "rbxassetid://4384403532",
+    Time    = 5,
+    Type    = "Success",
 })
 
--- Dismiss early
-notif:Close()    -- or: notif:Dismiss()
+n:Close()    -- dismiss early
+n:Dismiss()  -- same as Close()
 ```
 
 | Option | Type | Default | Description |
@@ -610,26 +596,22 @@ notif:Close()    -- or: notif:Dismiss()
 | `Name` | string | `"Notification"` | Bold title |
 | `Content` | string | `"Test"` | Body text (word-wrapped) |
 | `Image` | string | built-in | Left icon asset ID |
-| `Time` | number | `15` | Seconds until auto-dismiss |
-| `Type` | string | `"Info"` | Notification type — sets accent color |
+| `Time` | number | `15` | Seconds before auto-dismiss |
+| `Type` | string | `"Info"` | Accent type — sets left border color |
 
 ### Notification Types
 
-| Type | Accent Color |
+| Type | Color | Use for |
+|---|---|---|
+| `"Info"` | Blue `(0, 120, 255)` | General information |
+| `"Success"` | Green `(0, 180, 80)` | Operation completed |
+| `"Warning"` | Orange `(255, 160, 0)` | Potential issue |
+| `"Error"` | Red `(220, 50, 50)` | Failure / critical |
+
+| Returns | Description |
 |---|---|
-| `"Info"` | Blue `(0, 120, 255)` |
-| `"Success"` | Green `(0, 180, 80)` |
-| `"Warning"` | Orange `(255, 160, 0)` |
-| `"Error"` | Red `(220, 50, 50)` |
-
-The accent color is shown as a 3px left border strip on the notification frame.
-
-**Returns:**
-
-| Method | Description |
-|---|---|
-| `notif:Close()` | Immediately start the fade-out and slide-off animation |
-| `notif:Dismiss()` | Alias for `Close()` |
+| `:Close()` | Start fade-out and slide-off animation immediately |
+| `:Dismiss()` | Alias for `Close()` |
 
 ---
 
@@ -639,30 +621,26 @@ The accent color is shown as a 3px left border strip on the notification frame.
 
 | Name | Style |
 |---|---|
-| `Default` | Dark grey |
-| `Midnight` | Deep blue-black |
-| `Rose` | Dark with pink/rose accents |
-| `Ocean` | Dark navy/teal |
-| `Forest` | Dark muted green |
-| `Ember` | Dark orange/amber |
-| `Slate` | Cool blue-grey |
-| `Mocha` | Warm dark brown |
+| `Default` | Dark grey — neutral baseline |
+| `Midnight` | Near-black with vivid blue glow |
+| `Rose` | Dark wine with crimson glow |
+| `Ocean` | Deep navy with cyan glow |
+| `Forest` | Dark pine with vivid green glow |
+| `Ember` | Charcoal with molten orange glow |
+| `Slate` | Steel blue-grey |
+| `Mocha` | Dark espresso with caramel glow |
 
 ### Setting a Theme
 
-**On window creation:**
 ```lua
-unknown:MakeWindow({ Theme = "Midnight", ... })
-```
+-- On window creation:
+unknown:MakeWindow({ Theme = "Midnight" })
 
-**At runtime via ThemeSwitcher element:**
-```lua
+-- Via ThemeSwitcher element (live switching):
 Tab:AddThemeSwitcher()
 ```
 
 ### Adding a Custom Theme
-
-Add entries to `unknown.Themes` before calling `MakeWindow`:
 
 ```lua
 unknown.Themes.Neon = {
@@ -675,219 +653,530 @@ unknown.Themes.Neon = {
 }
 ```
 
-All six keys are required. Once added, `"Neon"` will appear in `AddThemeSwitcher()` automatically.
+All six keys are required. Custom themes automatically appear in `AddThemeSwitcher()`.
 
 ---
 
 ## Config System
 
-The config system serializes all flagged element values to a JSON file and loads them on the next session.
+Serialises all flagged element values to JSON and reloads them on the next session.
 
-### Enabling Config
+### Setup
 
 ```lua
 local Window = unknown:MakeWindow({
     SaveConfig   = true,
-    ConfigFolder = "MyScript",    -- folder created in the executor's workspace
-    ConfigName   = "profile1",   -- filename (without .txt); defaults to game.GameId
+    ConfigFolder = "MyScript",
+    ConfigName   = "default",
 })
 ```
 
 ### Flagging Elements
 
-Add `Flag` and `Save = true` to any element that supports it:
-
 ```lua
 Tab:AddToggle({
-    Name    = "God Mode",
-    Flag    = "godMode",    -- unique string key
-    Save    = true,
-    Callback = function(v) ... end,
+    Name     = "Feature",
+    Flag     = "myFeature",   -- unique key
+    Save     = true,
+    Callback = function(v) end,
 })
 ```
 
-Supported by: Toggle, Slider, Dropdown, Bind, Colorpicker.
+Supported: Toggle, Slider, Dropdown, Bind, Colorpicker.
 
-### OnLoad Callback
+### OnLoad
 
-Fires immediately after config loads a specific flag's value:
+Fires after config restores a specific flag's value:
 
 ```lua
 Tab:AddToggle({
-    Flag   = "godMode",
+    Flag   = "myFeature",
     Save   = true,
-    OnLoad = function(loadedValue)
-        print("Loaded godMode as:", loadedValue)
+    OnLoad = function(loaded)
+        print("Restored:", loaded)
     end,
-    Callback = function(v) ... end,
+    Callback = function(v) end,
 })
 ```
 
-> OnLoad is not called for flags inside **locked tabs** until the tab is unlocked.
+> **Note:** `OnLoad` does not fire for flags inside locked tabs until `Tab:SetLocked(false)` is called.
 
-### Auto-loading Config
+### Auto-Loading
 
-Call `unknown:Init()` after all windows and tabs are created:
+Call `unknown:Init()` **after** all tabs and elements are created:
 
 ```lua
 unknown:Init()
 ```
 
-This checks if a save file exists for the current `ConfigName` and loads it automatically, then shows an Info notification.
+Checks for a save file matching `ConfigName` and loads it, then shows an Info notification.
 
-### Resetting Config
-
-Resets all flagged elements to their `Default` values:
+### Reset All to Defaults
 
 ```lua
 unknown:ResetConfig()
 ```
 
+Calls `:Set(Default)` on every flagged element that has a `Default` value.
+
 ---
 
 ## Global Methods
 
-Methods called directly on the `unknown` object.
-
-### `unknown:MakeWindow(config)` → `TabFunction`
-Create the main window. See [Window](#window).
-
-### `unknown:MakeNotification(config)` → `handle`
-Show a notification. See [Notifications](#notifications).
-
-### `unknown:Init()`
-Load saved config (if `SaveConfig = true`) and fire a notification. Call this after all tabs and elements are set up.
-
-### `unknown:ResetConfig()`
-Reset all flagged elements to their default values.
-
-### `unknown:Destroy()`
-Destroy the entire UI and clean up all connections.
-
-### `unknown:IsRunning()` → `bool`
-Returns `true` if the UI ScreenGui is still parented and active.
+| Method | Returns | Description |
+|---|---|---|
+| `unknown:MakeWindow(config)` | `Window` | Create the main window |
+| `unknown:MakeNotification(config)` | `handle` | Show a toast notification |
+| `unknown:Init()` | — | Load saved config and fire OnLoad callbacks |
+| `unknown:ResetConfig()` | — | Reset all flags to their defaults |
+| `unknown:Destroy()` | — | Destroy the UI and disconnect all connections |
+| `unknown:IsRunning()` | `bool` | `true` if the UI is still active |
 
 ---
 
 ## Full Example
 
+This example covers every element, shows notification type demos via buttons, advances a progress bar via buttons, uses sections, locked tabs, multi-select dropdown, keybinds, config saving, and custom theme.
+
 ```lua
 local unknown = loadstring(game:HttpGetAsync("YOUR_RAW_URL"))()
 
+-- Optional: add a custom theme before MakeWindow
+unknown.Themes.Neon = {
+    Main     = Color3.fromRGB(10, 10, 10),
+    Second   = Color3.fromRGB(18, 18, 18),
+    Stroke   = Color3.fromRGB(0, 255, 120),
+    Divider  = Color3.fromRGB(0, 255, 120),
+    Text     = Color3.fromRGB(255, 255, 255),
+    TextDark = Color3.fromRGB(0, 200, 100),
+}
+
 local Window = unknown:MakeWindow({
-    Name         = "My Script",
-    Theme        = "Midnight",
-    DefaultTab   = "Main",
-    IntroEnabled = true,
-    IntroText    = "My Script",
-    SaveConfig   = true,
-    ConfigFolder = "MyScript",
-    ConfigName   = "default",
-    Transparent  = false,
-    Blur         = false,
-    MinSize      = Vector2.new(400, 280),
-    MaxSize      = Vector2.new(800, 500),
-    CloseCallback = function()
-        print("UI closed")
+    Name              = "Unknown Script",
+    Theme             = "Midnight",
+    DefaultTab        = "Main",
+    IntroEnabled      = true,
+    IntroText         = "Unknown Script",
+    ShowIcon          = false,
+    SaveConfig        = true,
+    ConfigFolder      = "UnknownScript",
+    ConfigName        = "default",
+    Transparent       = false,
+    Blur              = false,
+    MinSize           = Vector2.new(430, 300),
+    MaxSize           = Vector2.new(800, 520),
+    CloseCallback     = function()
+        print("UI hidden — RightShift to reopen")
     end,
 })
 
--- Main tab
-local Main = Window:MakeTab({
-    Name = "Main",
-    Icon = "home",
-})
+-- ══════════════════════════════════════
+--   MAIN TAB
+-- ══════════════════════════════════════
+local Main = Window:MakeTab({ Name = "Main", Icon = "home" })
 
-Main:AddLabel("Welcome to My Script")
+Main:AddLabel("Welcome to Unknown Script")
+Main:AddParagraph("Read me", "This UI is fully themeable and supports config saving. Use the Settings tab to switch themes or remap keys.")
 
-Main:AddSeparator({ Name = "Toggles" })
+Main:AddSeparator({ Name = "Player" })
 
-local GodMode = Main:AddToggle({
+local GodToggle = Main:AddToggle({
     Name     = "God Mode",
     Default  = false,
+    Color    = Color3.fromRGB(255, 60, 60),
     Flag     = "godMode",
     Save     = true,
+    OnLoad   = function(v) print("[Config] God Mode loaded as:", v) end,
     Callback = function(v)
-        print("God Mode:", v)
+        local hum = game.Players.LocalPlayer.Character and
+                    game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
+        if hum then
+            hum.MaxHealth = v and math.huge or 100
+            hum.Health    = v and math.huge or 100
+        end
     end,
 })
 
-Main:AddSlider({
+local SpeedSlider = Main:AddSlider({
     Name      = "Walk Speed",
     Min       = 16,
-    Max       = 200,
+    Max       = 250,
     Default   = 16,
-    Increment = 1,
+    Increment = 2,
     ValueName = "stud/s",
+    Color     = Color3.fromRGB(9, 149, 98),
     Flag      = "walkSpeed",
     Save      = true,
+    OnLoad    = function(v) print("[Config] Walk speed loaded as:", v) end,
     Callback  = function(v)
-        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = v
+        local hum = game.Players.LocalPlayer.Character and
+                    game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
+        if hum then hum.WalkSpeed = v end
     end,
 })
 
-Main:AddDropdown({
-    Name    = "Team",
-    Options = {"Red", "Blue", "Green"},
-    Default = "Red",
-    Callback = function(v)
-        print("Team:", v)
+local JumpSlider = Main:AddSlider({
+    Name      = "Jump Power",
+    Min       = 0,
+    Max       = 200,
+    Default   = 50,
+    Increment = 5,
+    ValueName = "power",
+    Color     = Color3.fromRGB(60, 120, 220),
+    Flag      = "jumpPower",
+    Save      = true,
+    Callback  = function(v)
+        local hum = game.Players.LocalPlayer.Character and
+                    game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
+        if hum then hum.JumpPower = v end
+    end,
+})
+
+Main:AddSeparator({ Name = "Actions" })
+
+Main:AddButton({
+    Name     = "Teleport to Spawn",
+    Callback = function()
+        local root = game.Players.LocalPlayer.Character and
+                     game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if root then root.CFrame = CFrame.new(0, 5, 0) end
     end,
 })
 
 Main:AddButton({
-    Name     = "Reset Character",
+    Name     = "Respawn Character",
     Callback = function()
-        game.Players.LocalPlayer.Character.Humanoid.Health = 0
+        game.Players.LocalPlayer:LoadCharacter()
     end,
 })
 
--- Settings tab
-local Settings = Window:MakeTab({
-    Name = "Settings",
-    Icon = "settings",
+-- Locked button example
+local LockedBtn = Main:AddButton({
+    Name     = "Admin Only Action",
+    Locked   = true,
+    Callback = function()
+        print("Admin action fired!")
+    end,
 })
+-- To unlock later: LockedBtn:ButtonLocked(false)
+
+Main:AddSeparator({})  -- plain divider
+
+local NameBox = Main:AddTextbox({
+    Name          = "Chat Message",
+    Default       = "",
+    TextDisappear = true,
+    Callback      = function(text)
+        if #text > 0 then
+            game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
+                and game.Players.LocalPlayer:Chat(text)
+        end
+    end,
+})
+
+-- ══════════════════════════════════════
+--   COMBAT TAB
+-- ══════════════════════════════════════
+local Combat = Window:MakeTab({ Name = "Combat", Icon = "sword" })
+
+local CombatSec = Combat:AddSection({ Name = "Aimbot" })
+
+local AimbotToggle = CombatSec:AddToggle({
+    Name     = "Aimbot",
+    Default  = false,
+    Flag     = "aimbot",
+    Save     = true,
+    Callback = function(v) print("Aimbot:", v) end,
+})
+
+CombatSec:AddSlider({
+    Name      = "Aimbot FOV",
+    Min       = 10,
+    Max       = 500,
+    Default   = 120,
+    Increment = 5,
+    ValueName = "px",
+    Flag      = "aimbotFOV",
+    Save      = true,
+    Callback  = function(v) print("FOV:", v) end,
+})
+
+CombatSec:AddDropdown({
+    Name    = "Aim Part",
+    Options = { "Head", "Torso", "HumanoidRootPart" },
+    Default = "Head",
+    Flag    = "aimPart",
+    Save    = true,
+    Callback = function(v) print("Aiming at:", v) end,
+})
+
+local VisualsSec = Combat:AddSection({ Name = "ESP" })
+
+local ESPToggle = VisualsSec:AddToggle({
+    Name     = "ESP",
+    Default  = false,
+    Flag     = "esp",
+    Save     = true,
+    Callback = function(v) print("ESP:", v) end,
+})
+
+local ESPColor = VisualsSec:AddColorpicker({
+    Name     = "ESP Color",
+    Default  = Color3.fromRGB(255, 50, 50),
+    Flag     = "espColor",
+    Save     = true,
+    OnLoad   = function(c) print("[Config] ESP color loaded") end,
+    Callback = function(c) print("ESP color changed:", c) end,
+})
+
+VisualsSec:AddDropdown({
+    Name            = "ESP Info",
+    Options         = { "Name", "Health", "Distance", "Weapon", "Debug" },
+    IsMulti         = true,
+    DisabledOptions = { "Debug" },
+    Callback        = function(tbl)
+        for k in pairs(tbl) do print("Show:", k) end
+    end,
+})
+
+-- ══════════════════════════════════════
+--   NOTIFICATIONS TAB
+-- ══════════════════════════════════════
+local Notifs = Window:MakeTab({ Name = "Notifications", Icon = "bell" })
+
+Notifs:AddLabel("Press a button to preview each notification type.")
+Notifs:AddSeparator({ Name = "Types" })
+
+Notifs:AddButton({
+    Name     = "Info Notification",
+    Callback = function()
+        unknown:MakeNotification({
+            Name    = "Information",
+            Content = "This is an informational message.",
+            Time    = 4,
+            Type    = "Info",
+        })
+    end,
+})
+
+Notifs:AddButton({
+    Name     = "Success Notification",
+    Callback = function()
+        unknown:MakeNotification({
+            Name    = "Success!",
+            Content = "The operation completed without errors.",
+            Time    = 4,
+            Type    = "Success",
+        })
+    end,
+})
+
+Notifs:AddButton({
+    Name     = "Warning Notification",
+    Callback = function()
+        unknown:MakeNotification({
+            Name    = "Warning",
+            Content = "Something might not work correctly.",
+            Time    = 4,
+            Type    = "Warning",
+        })
+    end,
+})
+
+Notifs:AddButton({
+    Name     = "Error Notification",
+    Callback = function()
+        local n = unknown:MakeNotification({
+            Name    = "Error",
+            Content = "A critical error occurred. Check your input.",
+            Time    = 6,
+            Type    = "Error",
+        })
+        -- Dismiss it early after 2 seconds
+        task.delay(2, function() n:Dismiss() end)
+    end,
+})
+
+Notifs:AddSeparator({ Name = "Early Dismiss" })
+
+Notifs:AddButton({
+    Name     = "Show + Auto-dismiss in 1.5s",
+    Callback = function()
+        local n = unknown:MakeNotification({
+            Name    = "Quick",
+            Content = "This will disappear in 1.5 seconds.",
+            Time    = 10,
+            Type    = "Info",
+        })
+        task.delay(1.5, function() n:Close() end)
+    end,
+})
+
+-- ══════════════════════════════════════
+--   PROGRESS BAR TAB
+-- ══════════════════════════════════════
+local Progress = Window:MakeTab({ Name = "Progress", Icon = "loader" })
+
+Progress:AddLabel("Use the buttons below to step through the progress bar.")
+
+local Bar = Progress:AddProgressBar({
+    Name    = "Loading Assets",
+    Steps   = {
+        "Connecting to server",
+        "Loading textures",
+        "Building world",
+        "Spawning entities",
+        "Finalising",
+        "Done!",
+    },
+    Default = 1,
+})
+
+Progress:AddSeparator({ Name = "Controls" })
+
+Progress:AddButton({
+    Name     = "Next Step →",
+    Callback = function()
+        if Bar.Value < 6 then
+            Bar:SetStep(Bar.Value + 1)
+        end
+    end,
+})
+
+Progress:AddButton({
+    Name     = "← Previous Step",
+    Callback = function()
+        if Bar.Value > 1 then
+            Bar:SetStep(Bar.Value - 1)
+        end
+    end,
+})
+
+Progress:AddButton({
+    Name     = "Jump to Done",
+    Callback = function()
+        Bar:SetStep(6)
+        unknown:MakeNotification({
+            Name    = "Complete",
+            Content = "All steps finished!",
+            Time    = 3,
+            Type    = "Success",
+        })
+    end,
+})
+
+Progress:AddButton({
+    Name     = "Reset Bar",
+    Callback = function()
+        Bar:SetStep(1)
+        Bar:SetName("Loading Assets")
+    end,
+})
+
+Progress:AddButton({
+    Name     = "Rename Bar",
+    Callback = function()
+        Bar:SetName("Installing Mods — Step " .. Bar.Value)
+    end,
+})
+
+-- ══════════════════════════════════════
+--   SETTINGS TAB
+-- ══════════════════════════════════════
+local Settings = Window:MakeTab({ Name = "Settings", Icon = "settings" })
 
 Settings:AddThemeSwitcher()
+Settings:AddSeparator({ Name = "Keybinds" })
 
 Settings:AddBind({
-    Name     = "Toggle UI",
+    Name     = "Toggle UI Visibility",
     Default  = Enum.KeyCode.RightShift,
-    Flag     = "uiToggle",
+    Hold     = false,
+    Flag     = "uiBind",
     Save     = true,
     Callback = function()
-        print("UI toggled")
+        print("UI toggle triggered via bind")
     end,
 })
 
--- Locked tab example
-local Premium = Window:MakeTab({
-    Name   = "Premium",
-    Icon   = "lock",
+Settings:AddBind({
+    Name     = "Sprint (Hold)",
+    Default  = Enum.KeyCode.LeftShift,
+    Hold     = true,
+    Flag     = "sprintBind",
+    Save     = true,
+    Callback = function(holding)
+        local hum = game.Players.LocalPlayer.Character and
+                    game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
+        if hum then
+            hum.WalkSpeed = holding and 40 or SpeedSlider.Value
+        end
+    end,
+})
+
+Settings:AddSeparator({ Name = "Config" })
+
+Settings:AddButton({
+    Name     = "Reset All Settings",
+    Callback = function()
+        unknown:ResetConfig()
+        unknown:MakeNotification({
+            Name    = "Reset",
+            Content = "All settings restored to defaults.",
+            Time    = 3,
+            Type    = "Info",
+        })
+    end,
+})
+
+Settings:AddDropdown({
+    Name    = "Config Profile",
+    Options = { "default", "pvp", "pve", "stealth" },
+    Default = "default",
+    Callback = function(profile)
+        print("Switched to profile:", profile)
+    end,
+})
+
+-- ══════════════════════════════════════
+--   LOCKED TAB EXAMPLE
+-- ══════════════════════════════════════
+local Admin = Window:MakeTab({
+    Name   = "Admin",
+    Icon   = "shield",
     Locked = true,
 })
 
--- Unlock later:
--- Premium:SetLocked(false)
-
--- Notifications example
-local n = unknown:MakeNotification({
-    Name    = "Ready",
-    Content = "Script loaded successfully.",
-    Time    = 4,
-    Type    = "Success",
+-- Elements inside a locked tab still load but their config values
+-- are NOT restored until the tab is unlocked.
+Admin:AddToggle({
+    Name     = "Kill All",
+    Flag     = "killAll",
+    Save     = false,
+    Callback = function(v) print("Kill all:", v) end,
 })
 
--- Start config auto-load
+Admin:AddButton({
+    Name     = "Shutdown Server",
+    Callback = function() print("Shutdown!") end,
+})
+
+-- Unlock from another tab:
+Settings:AddButton({
+    Name     = "Unlock Admin Tab",
+    Callback = function()
+        Admin:SetLocked(false)
+        unknown:MakeNotification({
+            Name    = "Admin Unlocked",
+            Content = "The Admin tab is now accessible.",
+            Time    = 3,
+            Type    = "Success",
+        })
+    end,
+})
+
+-- ══════════════════════════════════════
+--   INIT (load config)
+-- ══════════════════════════════════════
 unknown:Init()
 ```
-
----
-
-## Notes
-
-- **Mobile support** — Window drag and colorpicker pickers both respond to touch input (`UserInputType.Touch`).
-- **Lucide icons** — Any icon name from [lucide.dev](https://lucide.dev) can be used as a string for tab and element icons. Falls back gracefully if the icon is not found.
-- **Flags must be unique** — Using the same `Flag` key for two elements will cause one to overwrite the other in config.
-- **Locked tab + config** — If `SaveConfig = true` and a tab is locked on load, its flags will not be restored until `Tab:SetLocked(false)` is called.
-- **ThemeSwitcher** — Always reflects all themes in `unknown.Themes`, including custom ones added after the library loads.
