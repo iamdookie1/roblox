@@ -21,61 +21,68 @@ local unknown = {
 			Text = Color3.fromRGB(240, 240, 240),
 			TextDark = Color3.fromRGB(150, 150, 150)
 		},
+		-- Deep blue-black like open space
 		Midnight = {
-			Main = Color3.fromRGB(8, 10, 22),
-			Second = Color3.fromRGB(14, 18, 38),
-			Stroke = Color3.fromRGB(40, 55, 110),
-			Divider = Color3.fromRGB(40, 55, 110),
-			Text = Color3.fromRGB(220, 225, 255),
-			TextDark = Color3.fromRGB(110, 120, 175)
+			Main    = Color3.fromRGB(5,  6,  15),
+			Second  = Color3.fromRGB(10, 13, 30),
+			Stroke  = Color3.fromRGB(55, 80, 200),
+			Divider = Color3.fromRGB(55, 80, 200),
+			Text    = Color3.fromRGB(225, 230, 255),
+			TextDark= Color3.fromRGB(95, 115, 200)
 		},
+		-- Dark wine / crimson
 		Rose = {
-			Main = Color3.fromRGB(20, 14, 16),
-			Second = Color3.fromRGB(48, 22, 32),
-			Stroke = Color3.fromRGB(160, 55, 90),
-			Divider = Color3.fromRGB(160, 55, 90),
-			Text = Color3.fromRGB(255, 220, 230),
-			TextDark = Color3.fromRGB(180, 110, 135)
+			Main    = Color3.fromRGB(14, 7,  10),
+			Second  = Color3.fromRGB(38, 13, 22),
+			Stroke  = Color3.fromRGB(195, 35, 75),
+			Divider = Color3.fromRGB(195, 35, 75),
+			Text    = Color3.fromRGB(255, 210, 225),
+			TextDark= Color3.fromRGB(200, 95, 135)
 		},
+		-- Deep sea navy with cyan glow
 		Ocean = {
-			Main = Color3.fromRGB(8, 16, 28),
-			Second = Color3.fromRGB(12, 28, 48),
-			Stroke = Color3.fromRGB(30, 110, 140),
-			Divider = Color3.fromRGB(30, 110, 140),
-			Text = Color3.fromRGB(200, 235, 245),
-			TextDark = Color3.fromRGB(90, 160, 185)
+			Main    = Color3.fromRGB(4,  11, 20),
+			Second  = Color3.fromRGB(7,  20, 36),
+			Stroke  = Color3.fromRGB(0,  160, 200),
+			Divider = Color3.fromRGB(0,  160, 200),
+			Text    = Color3.fromRGB(185, 235, 250),
+			TextDark= Color3.fromRGB(55, 170, 210)
 		},
+		-- Dark pine with vivid green glow
 		Forest = {
-			Main = Color3.fromRGB(12, 18, 14),
-			Second = Color3.fromRGB(18, 30, 22),
-			Stroke = Color3.fromRGB(45, 105, 60),
-			Divider = Color3.fromRGB(45, 105, 60),
-			Text = Color3.fromRGB(210, 240, 215),
-			TextDark = Color3.fromRGB(100, 155, 115)
+			Main    = Color3.fromRGB(6,  12,  8),
+			Second  = Color3.fromRGB(11, 22, 14),
+			Stroke  = Color3.fromRGB(25, 155, 65),
+			Divider = Color3.fromRGB(25, 155, 65),
+			Text    = Color3.fromRGB(195, 245, 205),
+			TextDark= Color3.fromRGB(65, 175, 105)
 		},
+		-- Charcoal with molten orange
 		Ember = {
-			Main = Color3.fromRGB(20, 12, 8),
-			Second = Color3.fromRGB(38, 20, 10),
-			Stroke = Color3.fromRGB(185, 85, 20),
-			Divider = Color3.fromRGB(185, 85, 20),
-			Text = Color3.fromRGB(255, 235, 210),
-			TextDark = Color3.fromRGB(190, 130, 80)
+			Main    = Color3.fromRGB(12, 7,  4),
+			Second  = Color3.fromRGB(26, 12, 6),
+			Stroke  = Color3.fromRGB(230, 75, 10),
+			Divider = Color3.fromRGB(230, 75, 10),
+			Text    = Color3.fromRGB(255, 230, 195),
+			TextDark= Color3.fromRGB(215, 115, 45)
 		},
+		-- Steel blue-grey
 		Slate = {
-			Main = Color3.fromRGB(14, 18, 24),
-			Second = Color3.fromRGB(22, 28, 38),
-			Stroke = Color3.fromRGB(65, 85, 115),
-			Divider = Color3.fromRGB(65, 85, 115),
-			Text = Color3.fromRGB(215, 222, 235),
-			TextDark = Color3.fromRGB(115, 130, 155)
+			Main    = Color3.fromRGB(10, 14, 20),
+			Second  = Color3.fromRGB(18, 24, 34),
+			Stroke  = Color3.fromRGB(85, 120, 175),
+			Divider = Color3.fromRGB(85, 120, 175),
+			Text    = Color3.fromRGB(210, 220, 240),
+			TextDark= Color3.fromRGB(105, 130, 175)
 		},
+		-- Dark espresso with caramel glow
 		Mocha = {
-			Main = Color3.fromRGB(20, 14, 10),
-			Second = Color3.fromRGB(35, 24, 16),
-			Stroke = Color3.fromRGB(110, 72, 45),
-			Divider = Color3.fromRGB(110, 72, 45),
-			Text = Color3.fromRGB(240, 225, 210),
-			TextDark = Color3.fromRGB(165, 130, 100)
+			Main    = Color3.fromRGB(12, 8,  5),
+			Second  = Color3.fromRGB(26, 17, 10),
+			Stroke  = Color3.fromRGB(160, 90, 35),
+			Divider = Color3.fromRGB(160, 90, 35),
+			Text    = Color3.fromRGB(248, 232, 210),
+			TextDark= Color3.fromRGB(185, 130, 75)
 		},
 	},
 	SelectedTheme = "Default",
@@ -775,13 +782,25 @@ function unknown:MakeWindow(WindowConfig)
 	if WindowConfig.Transparent then
 		MainWindow.BackgroundTransparency = WindowConfig.TransparencyAmount
 	end
-	if WindowConfig.Blur then
-		pcall(function()
-			local BlurEffect = Instance.new("BlurEffect")
-			BlurEffect.Size = 24
-			BlurEffect.Parent = game:GetService("Lighting")
-		end)
+
+	local ActiveBlur = nil
+	local function ApplyBlur()
+		if WindowConfig.Blur and not ActiveBlur then
+			pcall(function()
+				ActiveBlur = Instance.new("BlurEffect")
+				ActiveBlur.Name = "UnknownUIBlur"
+				ActiveBlur.Size = 20
+				ActiveBlur.Parent = game:GetService("Lighting")
+			end)
+		end
 	end
+	local function RemoveBlur()
+		if ActiveBlur then
+			pcall(function() ActiveBlur:Destroy() end)
+			ActiveBlur = nil
+		end
+	end
+	ApplyBlur()
 
 	-- Resize handle (bottom-right corner)
 	local ResizeHandle = Create("TextButton", {
@@ -819,6 +838,7 @@ function unknown:MakeWindow(WindowConfig)
 	AddConnection(CloseBtn.MouseButton1Up, function()
 		MainWindow.Visible = false
 		UIHidden = true
+		RemoveBlur()
 		unknown:MakeNotification({
 			Name = "Interface Hidden",
 			Content = "Tap RightShift to reopen the interface",
@@ -830,6 +850,8 @@ function unknown:MakeWindow(WindowConfig)
 	AddConnection(UserInputService.InputBegan, function(Input)
 		if Input.KeyCode == Enum.KeyCode.RightShift and UIHidden then
 			MainWindow.Visible = true
+			UIHidden = false
+			ApplyBlur()
 		end
 	end)
 
@@ -891,6 +913,8 @@ function unknown:MakeWindow(WindowConfig)
 	end	
 
 	local TabFunction = {}
+	local TabRegistry = {} -- [tabName] = SwitchToTab function
+
 	function TabFunction:MakeTab(TabConfig)
 		TabConfig = TabConfig or {}
 		TabConfig.Name = TabConfig.Name or "Tab"
@@ -968,6 +992,7 @@ function unknown:MakeWindow(WindowConfig)
 			Container.Visible = true
 		end
 
+		TabRegistry[TabConfig.Name] = SwitchToTab
 		AddConnection(TabFrame.MouseButton1Click, SwitchToTab)
 
 		function Tab:SetLocked(locked)
@@ -1780,7 +1805,16 @@ function unknown:MakeWindow(WindowConfig)
 				AddConnection(Click.MouseButton1Down, function()
 					TweenService:Create(TextboxFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(unknown.Themes[unknown.SelectedTheme].Second.R * 255 + 6, unknown.Themes[unknown.SelectedTheme].Second.G * 255 + 6, unknown.Themes[unknown.SelectedTheme].Second.B * 255 + 6)}):Play()
 				end)
-			end 
+
+				local TextboxObj = {}
+				function TextboxObj:Set(text)
+					TextboxActual.Text = text or ""
+				end
+				function TextboxObj:Get()
+					return TextboxActual.Text
+				end
+				return TextboxObj
+			end
 			function ElementFunction:AddColorpicker(ColorpickerConfig)
 				ColorpickerConfig = ColorpickerConfig or {}
 				ColorpickerConfig.Name = ColorpickerConfig.Name or "Colorpicker"
@@ -1971,51 +2005,72 @@ function unknown:MakeWindow(WindowConfig)
 			function ElementFunction:AddSeparator(SeparatorConfig)
 				SeparatorConfig = SeparatorConfig or {}
 				local hasLabel = SeparatorConfig.Name and #SeparatorConfig.Name > 0
+				local GAP = 10
 
 				local SeparatorFrame = Create("Frame", {
-					Size = UDim2.new(1, 0, 0, hasLabel and 26 or 20),
+					Size = UDim2.new(1, 0, 0, 18),
 					BackgroundTransparency = 1,
 					Parent = ItemParent
 				})
 
-				AddThemeObject(Create("Frame", {
-					Size = UDim2.new(1, 0, 0, 1),
+				local SepObj = {}
+
+				if not hasLabel then
+					AddThemeObject(Create("Frame", {
+						Size = UDim2.new(1, 0, 0, 1),
+						Position = UDim2.new(0, 0, 0.5, 0),
+						AnchorPoint = Vector2.new(0, 0.5),
+						BorderSizePixel = 0,
+						Parent = SeparatorFrame
+					}), "Stroke")
+					function SepObj:Set(_) end
+					return SepObj
+				end
+
+				-- Left segment
+				local LeftLine = AddThemeObject(Create("Frame", {
+					Size = UDim2.new(0.5, 0, 0, 1),
 					Position = UDim2.new(0, 0, 0.5, 0),
 					AnchorPoint = Vector2.new(0, 0.5),
 					BorderSizePixel = 0,
 					Parent = SeparatorFrame
 				}), "Stroke")
 
-				local LabelObj = nil
-				if hasLabel then
-					local bg = Create("Frame", {
-						Size = UDim2.new(0, 0, 1, 0),
-						Position = UDim2.new(0.5, 0, 0, 0),
-						AnchorPoint = Vector2.new(0.5, 0),
-						BackgroundTransparency = 1,
-						AutomaticSize = Enum.AutomaticSize.X,
-						Parent = SeparatorFrame
-					})
-					Create("UIPadding", {
-						PaddingLeft = UDim.new(0, 6),
-						PaddingRight = UDim.new(0, 6),
-						Parent = bg
-					})
-					LabelObj = AddThemeObject(Create("TextLabel", {
-						Text = SeparatorConfig.Name,
-						Font = Enum.Font.GothamSemibold,
-						TextSize = 11,
-						Size = UDim2.new(0, 0, 1, 0),
-						AutomaticSize = Enum.AutomaticSize.X,
-						BackgroundTransparency = 1,
-						TextXAlignment = Enum.TextXAlignment.Center,
-						Parent = bg
-					}), "TextDark")
+				-- Right segment
+				local RightLine = AddThemeObject(Create("Frame", {
+					Size = UDim2.new(0.5, 0, 0, 1),
+					Position = UDim2.new(0.5, 0, 0.5, 0),
+					AnchorPoint = Vector2.new(0, 0.5),
+					BorderSizePixel = 0,
+					Parent = SeparatorFrame
+				}), "Stroke")
+
+				-- Centered label
+				local LabelObj = AddThemeObject(Create("TextLabel", {
+					Text = SeparatorConfig.Name,
+					Font = Enum.Font.GothamSemibold,
+					TextSize = 11,
+					Size = UDim2.new(0, 0, 0, 18),
+					AutomaticSize = Enum.AutomaticSize.X,
+					Position = UDim2.new(0.5, 0, 0.5, 0),
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					BackgroundTransparency = 1,
+					TextXAlignment = Enum.TextXAlignment.Center,
+					Parent = SeparatorFrame
+				}), "TextDark")
+
+				local function UpdateLines()
+					local halfW = math.ceil(LabelObj.AbsoluteSize.X / 2) + GAP
+					LeftLine.Size  = UDim2.new(0.5, -halfW, 0, 1)
+					RightLine.Size = UDim2.new(0.5, -halfW, 0, 1)
+					RightLine.Position = UDim2.new(0.5, halfW, 0.5, 0)
 				end
 
-				local SepObj = {}
+				LabelObj:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdateLines)
+				task.defer(UpdateLines)
+
 				function SepObj:Set(text)
-					if LabelObj then LabelObj.Text = text or "" end
+					LabelObj.Text = text or ""
 				end
 				return SepObj
 			end
@@ -2159,19 +2214,15 @@ function unknown:MakeWindow(WindowConfig)
 
 	-- SetTab: switch to a tab by name, fallback to first tab
 	function TabFunction:SetTab(name)
-		local found = false
-		for _, Tab in next, TabHolder:GetChildren() do
-			if Tab:IsA("TextButton") and Tab.Title.Text == name then
-				Tab:Invoke() -- simulate click via firing event
-				found = true
-				break
-			end
+		if name and TabRegistry[name] then
+			TabRegistry[name]()
+			return
 		end
-		if not found then
-			-- fallback: activate first tab
-			local firstTab = TabHolder:FindFirstChildWhichIsA("TextButton")
-			if firstTab then
-				firstTab.MouseButton1Click:Fire()
+		-- Fallback: activate first registered tab in sidebar order
+		for _, child in ipairs(TabHolder:GetChildren()) do
+			if child:IsA("TextButton") then
+				local fn = TabRegistry[child.Title.Text]
+				if fn then fn() return end
 			end
 		end
 	end
