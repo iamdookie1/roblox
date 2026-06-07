@@ -14,21 +14,23 @@ local unknown = {
 	Flags = {},
 	Themes = {
 		Default = {
-			Main = Color3.fromRGB(25, 25, 25),
-			Second = Color3.fromRGB(32, 32, 32),
-			Stroke = Color3.fromRGB(60, 60, 60),
+			Main    = Color3.fromRGB(25, 25, 25),
+			Second  = Color3.fromRGB(32, 32, 32),
+			Stroke  = Color3.fromRGB(60, 60, 60),
 			Divider = Color3.fromRGB(60, 60, 60),
-			Text = Color3.fromRGB(240, 240, 240),
-			TextDark = Color3.fromRGB(150, 150, 150)
+			Text    = Color3.fromRGB(240, 240, 240),
+			TextDark= Color3.fromRGB(150, 150, 150),
+			Border  = Color3.fromRGB(52, 52, 52),  -- subtle element outlines
 		},
 		-- Deep blue-black like open space
 		Midnight = {
 			Main    = Color3.fromRGB(5,  6,  15),
 			Second  = Color3.fromRGB(10, 13, 30),
-			Stroke  = Color3.fromRGB(55, 80, 200),
+			Stroke  = Color3.fromRGB(55, 80, 200),  -- vibrant sidebar/accent
 			Divider = Color3.fromRGB(55, 80, 200),
 			Text    = Color3.fromRGB(225, 230, 255),
-			TextDark= Color3.fromRGB(95, 115, 200)
+			TextDark= Color3.fromRGB(95, 115, 200),
+			Border  = Color3.fromRGB(20, 26, 58),   -- subtle element outline
 		},
 		-- Dark wine / crimson
 		Rose = {
@@ -37,7 +39,8 @@ local unknown = {
 			Stroke  = Color3.fromRGB(195, 35, 75),
 			Divider = Color3.fromRGB(195, 35, 75),
 			Text    = Color3.fromRGB(255, 210, 225),
-			TextDark= Color3.fromRGB(200, 95, 135)
+			TextDark= Color3.fromRGB(200, 95, 135),
+			Border  = Color3.fromRGB(55, 16, 30),
 		},
 		-- Deep sea navy with cyan glow
 		Ocean = {
@@ -46,7 +49,8 @@ local unknown = {
 			Stroke  = Color3.fromRGB(0,  160, 200),
 			Divider = Color3.fromRGB(0,  160, 200),
 			Text    = Color3.fromRGB(185, 235, 250),
-			TextDark= Color3.fromRGB(55, 170, 210)
+			TextDark= Color3.fromRGB(55, 170, 210),
+			Border  = Color3.fromRGB(10, 38, 60),
 		},
 		-- Dark pine with vivid green glow
 		Forest = {
@@ -55,7 +59,8 @@ local unknown = {
 			Stroke  = Color3.fromRGB(25, 155, 65),
 			Divider = Color3.fromRGB(25, 155, 65),
 			Text    = Color3.fromRGB(195, 245, 205),
-			TextDark= Color3.fromRGB(65, 175, 105)
+			TextDark= Color3.fromRGB(65, 175, 105),
+			Border  = Color3.fromRGB(14, 42, 20),
 		},
 		-- Charcoal with molten orange
 		Ember = {
@@ -64,7 +69,8 @@ local unknown = {
 			Stroke  = Color3.fromRGB(230, 75, 10),
 			Divider = Color3.fromRGB(230, 75, 10),
 			Text    = Color3.fromRGB(255, 230, 195),
-			TextDark= Color3.fromRGB(215, 115, 45)
+			TextDark= Color3.fromRGB(215, 115, 45),
+			Border  = Color3.fromRGB(50, 22, 8),
 		},
 		-- Steel blue-grey
 		Slate = {
@@ -73,7 +79,8 @@ local unknown = {
 			Stroke  = Color3.fromRGB(85, 120, 175),
 			Divider = Color3.fromRGB(85, 120, 175),
 			Text    = Color3.fromRGB(210, 220, 240),
-			TextDark= Color3.fromRGB(105, 130, 175)
+			TextDark= Color3.fromRGB(105, 130, 175),
+			Border  = Color3.fromRGB(24, 34, 52),
 		},
 		-- Dark espresso with caramel glow
 		Mocha = {
@@ -82,7 +89,8 @@ local unknown = {
 			Stroke  = Color3.fromRGB(160, 90, 35),
 			Divider = Color3.fromRGB(160, 90, 35),
 			Text    = Color3.fromRGB(248, 232, 210),
-			TextDark= Color3.fromRGB(185, 130, 75)
+			TextDark= Color3.fromRGB(185, 130, 75),
+			Border  = Color3.fromRGB(40, 25, 12),
 		},
 	},
 	SelectedTheme = "Default",
@@ -90,23 +98,41 @@ local unknown = {
 	SaveCfg = false
 }
 
---Feather Icons https://github.com/evoincorp/lucideblox/tree/master/src/modules/util - Created by 7kayoh
-local Icons = {}
+-- Lucide icon provider via icons.rest
+local LucideCache = nil
 
-local Success, Response = pcall(function()
-	Icons = HttpService:JSONDecode(game:HttpGetAsync("https://raw.githubusercontent.com/frappedevs/lucideblox/refs/heads/master/src/modules/util/icons.json")).icons
-end)
-
-if not Success then
-	warn("\nUnknown Library - Failed to load Feather Icons. Error code: " .. Response .. "\n")
-end	
-
-local function GetIcon(IconName)
-	if Icons[IconName] ~= nil then
-		return Icons[IconName]
-	else
-		return nil
+local function FetchLucideDB()
+	if LucideCache then return LucideCache end
+	local ok, raw = pcall(function()
+		return HttpService:GetAsync("https://icons.rest")
+	end)
+	if not ok or not raw then
+		warn("Unknown Library - Lucide: Failed to fetch icon database. Icons may not display.")
+		LucideCache = {}
+		return LucideCache
 	end
+	local decodeOk, data = pcall(function()
+		return HttpService:JSONDecode(raw)
+	end)
+	if decodeOk and data then
+		LucideCache = (type(data.icons) == "table") and data.icons or (type(data) == "table" and data or {})
+	else
+		LucideCache = {}
+	end
+	return LucideCache
+end
+
+local function GetIcon(name, fallback)
+	if not name or name == "" then return fallback or nil end
+	-- If it's already an asset ID, return as-is
+	if string.match(tostring(name), "^rbxassetid://") then return name end
+	local db = FetchLucideDB()
+	local asset = db[name]
+	if asset then
+		local s = tostring(asset)
+		return string.match(s, "^rbxassetid://") and s or ("rbxassetid://" .. s)
+	end
+	return fallback or nil
 end   
 
 local UnknownGui = Instance.new("ScreenGui")
@@ -515,25 +541,26 @@ function unknown:MakeNotification(NotificationConfig)
 	}), {
 		AccentStrip,
 		MakeElement("Stroke", Color3.fromRGB(93, 93, 93), 1.2),
-		MakeElement("Padding", 12, 15, 12, 12),
+		MakeElement("Padding", 12, 22, 12, 12),
 		SetProps(MakeElement("Image", NotificationConfig.Image), {
-			Size = UDim2.new(0, 20, 0, 20),
+			Size = UDim2.new(0, 18, 0, 18),
+			Position = UDim2.new(0, 4, 0, 1),
 			ImageColor3 = Color3.fromRGB(240, 240, 240),
 			Name = "Icon"
 		}),
-		SetProps(MakeElement("Label", NotificationConfig.Name, 15), {
-			Size = UDim2.new(1, -30, 0, 20),
-			Position = UDim2.new(0, 30, 0, 0),
+		SetProps(MakeElement("Label", NotificationConfig.Name, 14), {
+			Size = UDim2.new(1, -28, 0, 18),
+			Position = UDim2.new(0, 28, 0, 0),
 			Font = Enum.Font.GothamBold,
 			Name = "Title"
 		}),
-		SetProps(MakeElement("Label", NotificationConfig.Content, 14), {
+		SetProps(MakeElement("Label", NotificationConfig.Content, 13), {
 			Size = UDim2.new(1, 0, 0, 0),
-			Position = UDim2.new(0, 0, 0, 25),
+			Position = UDim2.new(0, 0, 0, 24),
 			Font = Enum.Font.GothamSemibold,
 			Name = "Content",
 			AutomaticSize = Enum.AutomaticSize.Y,
-			TextColor3 = Color3.fromRGB(200, 200, 200),
+			TextColor3 = Color3.fromRGB(185, 185, 185),
 			TextWrapped = true
 		})
 	})
@@ -609,6 +636,8 @@ function unknown:MakeWindow(WindowConfig)
 	WindowConfig.Blur = WindowConfig.Blur or false
 	WindowConfig.MinSize = WindowConfig.MinSize or Vector2.new(400, 280)
 	WindowConfig.MaxSize = WindowConfig.MaxSize or Vector2.new(900, 600)
+	WindowConfig.ConnectedElements = WindowConfig.ConnectedElements or false
+	WindowConfig.BetterAnimations  = WindowConfig.BetterAnimations  or false
 	unknown.Folder = WindowConfig.ConfigFolder
 	unknown.SaveCfg = WindowConfig.SaveConfig
 	unknown.OnLoadCallbacks = unknown.OnLoadCallbacks or {}
@@ -702,7 +731,7 @@ function unknown:MakeWindow(WindowConfig)
 				Size = UDim2.new(0, 32, 0, 32),
 				Position = UDim2.new(0, 10, 0.5, 0)
 			}), {
-				AddThemeObject(MakeElement("Stroke"), "Stroke"),
+				AddThemeObject(MakeElement("Stroke"), "Border"),
 				MakeElement("Corner", 1)
 			}),
 			AddThemeObject(SetProps(MakeElement("Label", LocalPlayer.DisplayName, 14), {
@@ -754,7 +783,7 @@ function unknown:MakeWindow(WindowConfig)
 				Size = UDim2.new(0, 70, 0, 30),
 				Position = UDim2.new(1, -90, 0, 10)
 			}), {
-				AddThemeObject(MakeElement("Stroke"), "Stroke"),
+				AddThemeObject(MakeElement("Stroke"), "Border"),
 				AddThemeObject(SetProps(MakeElement("Frame"), {
 					Size = UDim2.new(0, 1, 1, 0),
 					Position = UDim2.new(0.5, 0, 0, 0)
@@ -914,6 +943,26 @@ function unknown:MakeWindow(WindowConfig)
 
 	local TabFunction = {}
 	local TabRegistry = {} -- [tabName] = SwitchToTab function
+	local ConnectedElements = WindowConfig.ConnectedElements
+	local BetterAnimations  = WindowConfig.BetterAnimations
+
+	-- Tab switch animation
+	local function SwitchTabAnimated(oldContainer, newContainer)
+		if not oldContainer or oldContainer == newContainer then
+			if newContainer then newContainer.Visible = true end
+			return
+		end
+		TweenService:Create(oldContainer, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
+		task.delay(0.1, function()
+			oldContainer.Visible = false
+			oldContainer.BackgroundTransparency = 0
+			newContainer.BackgroundTransparency = 1
+			newContainer.Visible = true
+			TweenService:Create(newContainer, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
+		end)
+	end
+
+	local CurrentContainer = nil
 
 	function TabFunction:MakeTab(TabConfig)
 		TabConfig = TabConfig or {}
@@ -981,15 +1030,18 @@ function unknown:MakeWindow(WindowConfig)
 					TweenService:Create(T.Title, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {TextTransparency = 0.4}):Play()
 				end
 			end
-			for _, ItemContainer in next, MainWindow:GetChildren() do
-				if ItemContainer.Name == "ItemContainer" then
-					ItemContainer.Visible = false
-				end
-			end
+			TabFrame.Title.Font = Enum.Font.GothamBlack
 			TweenService:Create(TabFrame.Ico, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
 			TweenService:Create(TabFrame.Title, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
-			TabFrame.Title.Font = Enum.Font.GothamBlack
-			Container.Visible = true
+			if BetterAnimations then
+				SwitchTabAnimated(CurrentContainer, Container)
+			else
+				for _, c in next, MainWindow:GetChildren() do
+					if c.Name == "ItemContainer" then c.Visible = false end
+				end
+				Container.Visible = true
+			end
+			CurrentContainer = Container
 		end
 
 		TabRegistry[TabConfig.Name] = SwitchToTab
@@ -1030,6 +1082,45 @@ function unknown:MakeWindow(WindowConfig)
 		end
 
 		local function GetElements(ItemParent)
+			-- ConnectedElements: adjust list gap and track neighbours
+			do
+				local list = ItemParent:FindFirstChildWhichIsA("UIListLayout")
+				if list and ConnectedElements then list.Padding = UDim.new(0, 0) end
+			end
+			local lastElemFrame = nil
+
+			local function connectFrame(frame, isSep)
+				if not ConnectedElements then return end
+				if isSep then lastElemFrame = nil return end
+				if lastElemFrame then
+					-- Cover bottom of previous frame (square its bottom corners)
+					local bot = AddThemeObject(Create("Frame", {
+						Name = "CornerCover_Bot", BorderSizePixel = 0,
+						Size = UDim2.new(1, 0, 0, 5),
+						Position = UDim2.new(0, 0, 1, -5),
+						ZIndex = (lastElemFrame.ZIndex or 1) + 2,
+						Parent = lastElemFrame
+					}), "Second")
+					-- Cover top of new frame (square its top corners)
+					local top = AddThemeObject(Create("Frame", {
+						Name = "CornerCover_Top", BorderSizePixel = 0,
+						Size = UDim2.new(1, 0, 0, 5),
+						Position = UDim2.new(0, 0, 0, 0),
+						ZIndex = (frame.ZIndex or 1) + 2,
+						Parent = frame
+					}), "Second")
+					-- 1px divider line between them
+					AddThemeObject(Create("Frame", {
+						Name = "ConnectedDiv", BorderSizePixel = 0,
+						Size = UDim2.new(1, 0, 0, 1),
+						Position = UDim2.new(0, 0, 1, -1),
+						ZIndex = (lastElemFrame.ZIndex or 1) + 3,
+						Parent = lastElemFrame
+					}), "Border")
+				end
+				lastElemFrame = frame
+			end
+
 			local ElementFunction = {}
 			function ElementFunction:AddLabel(Text)
 				local LabelFrame = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", Color3.fromRGB(255, 255, 255), 0, 5), {
@@ -1043,8 +1134,9 @@ function unknown:MakeWindow(WindowConfig)
 						Font = Enum.Font.GothamBold,
 						Name = "Content"
 					}), "Text"),
-					AddThemeObject(MakeElement("Stroke"), "Stroke")
+					AddThemeObject(MakeElement("Stroke"), "Border")
 				}), "Second")
+				connectFrame(LabelFrame, false)
 
 				local LabelFunction = {}
 				function LabelFunction:Set(ToChange)
@@ -1074,7 +1166,7 @@ function unknown:MakeWindow(WindowConfig)
 						Name = "Content",
 						TextWrapped = true
 					}), "TextDark"),
-					AddThemeObject(MakeElement("Stroke"), "Stroke")
+					AddThemeObject(MakeElement("Stroke"), "Border")
 				}), "Second")
 
 				AddConnection(ParagraphFrame.Content:GetPropertyChangedSignal("Text"), function()
@@ -1088,6 +1180,7 @@ function unknown:MakeWindow(WindowConfig)
 				function ParagraphFunction:Set(ToChange)
 					ParagraphFrame.Content.Text = ToChange
 				end
+				connectFrame(ParagraphFrame, false)
 				return ParagraphFunction
 			end    
 			function ElementFunction:AddButton(ButtonConfig)
@@ -1117,7 +1210,7 @@ function unknown:MakeWindow(WindowConfig)
 						Size = UDim2.new(0, 20, 0, 20),
 						Position = UDim2.new(1, -30, 0, 7),
 					}), "TextDark"),
-					AddThemeObject(MakeElement("Stroke"), "Stroke"),
+					AddThemeObject(MakeElement("Stroke"), "Border"),
 					Click
 				}), "Second")
 
@@ -1173,10 +1266,24 @@ function unknown:MakeWindow(WindowConfig)
 					Button:ButtonLocked(true)
 				end
 
+				-- BetterAnimations: scale press
+				if BetterAnimations then
+					AddConnection(Click.MouseButton1Down, function()
+						TweenService:Create(ButtonFrame, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, -4, 0, 31)}):Play()
+					end)
+					AddConnection(Click.MouseButton1Up, function()
+						TweenService:Create(ButtonFrame, TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, 33)}):Play()
+					end)
+					AddConnection(Click.MouseLeave, function()
+						TweenService:Create(ButtonFrame, TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, 33)}):Play()
+					end)
+				end
+
 				function Button:Set(ButtonText)
 					ButtonFrame.Content.Text = ButtonText
 				end
 
+				connectFrame(ButtonFrame, false)
 				return Button
 			end    
 			function ElementFunction:AddToggle(ToggleConfig)
@@ -1224,7 +1331,7 @@ function unknown:MakeWindow(WindowConfig)
 						Font = Enum.Font.GothamBold,
 						Name = "Content"
 					}), "Text"),
-					AddThemeObject(MakeElement("Stroke"), "Stroke"),
+					AddThemeObject(MakeElement("Stroke"), "Border"),
 					ToggleBox,
 					Click
 				}), "Second")
@@ -1287,8 +1394,20 @@ function unknown:MakeWindow(WindowConfig)
 						unknown.OnLoadCallbacks[ToggleConfig.Flag] = ToggleConfig.OnLoad
 					end
 				end
+				-- BetterAnimations: bounce on toggle
+				if BetterAnimations then
+					local orig = Toggle.Set
+					function Toggle:Set(Value)
+						orig(self, Value)
+						TweenService:Create(ToggleBox, TweenInfo.new(0.09, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 20, 0, 20)}):Play()
+						task.delay(0.09, function()
+							TweenService:Create(ToggleBox, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 24, 0, 24)}):Play()
+						end)
+					end
+				end
+				connectFrame(ToggleFrame, false)
 				return Toggle
-			end  
+			end
 			function ElementFunction:AddSlider(SliderConfig)
 				SliderConfig = SliderConfig or {}
 				SliderConfig.Name = SliderConfig.Name or "Slider"
@@ -1347,7 +1466,7 @@ function unknown:MakeWindow(WindowConfig)
 						Font = Enum.Font.GothamBold,
 						Name = "Content"
 					}), "Text"),
-					AddThemeObject(MakeElement("Stroke"), "Stroke"),
+					AddThemeObject(MakeElement("Stroke"), "Border"),
 					SliderBar
 				}), "Second")
 
@@ -1382,8 +1501,9 @@ function unknown:MakeWindow(WindowConfig)
 				if SliderConfig.Flag then				
 					unknown.Flags[SliderConfig.Flag] = Slider
 				end
+				connectFrame(SliderFrame, false)
 				return Slider
-			end  
+			end
 			function ElementFunction:AddDropdown(DropdownConfig)
 				DropdownConfig = DropdownConfig or {}
 				DropdownConfig.Name = DropdownConfig.Name or "Dropdown"
@@ -1478,7 +1598,7 @@ function unknown:MakeWindow(WindowConfig)
 						ClipsDescendants = true,
 						Name = "F"
 					}),
-					AddThemeObject(MakeElement("Stroke"), "Stroke"),
+					AddThemeObject(MakeElement("Stroke"), "Border"),
 					MakeElement("Corner")
 				}), "Second")
 
@@ -1490,7 +1610,7 @@ function unknown:MakeWindow(WindowConfig)
 					for _, Option in pairs(Options) do
 						local isDisabled = DisabledSet[Option] == true
 						local OptionBtn = AddThemeObject(SetProps(SetChildren(MakeElement("Button", Color3.fromRGB(40, 40, 40)), {
-							MakeElement("Corner", 0, 6),
+							MakeElement("Corner", 0, 3),
 							AddThemeObject(SetProps(MakeElement("Label", Option, 13, isDisabled and 0.6 or 0.4), {
 								Position = UDim2.new(0, 8, 0, 0),
 								Size = UDim2.new(1, -8, 1, 0),
@@ -1603,6 +1723,7 @@ function unknown:MakeWindow(WindowConfig)
 						unknown.OnLoadCallbacks[DropdownConfig.Flag] = DropdownConfig.OnLoad
 					end
 				end
+				connectFrame(DropdownFrame, false)
 				return Dropdown
 			end
 			function ElementFunction:AddBind(BindConfig)
@@ -1625,7 +1746,7 @@ function unknown:MakeWindow(WindowConfig)
 					Position = UDim2.new(1, -12, 0.5, 0),
 					AnchorPoint = Vector2.new(1, 0.5)
 				}), {
-					AddThemeObject(MakeElement("Stroke"), "Stroke"),
+					AddThemeObject(MakeElement("Stroke"), "Border"),
 					AddThemeObject(SetProps(MakeElement("Label", BindConfig.Name, 14), {
 						Size = UDim2.new(1, 0, 1, 0),
 						Font = Enum.Font.GothamBold,
@@ -1644,7 +1765,7 @@ function unknown:MakeWindow(WindowConfig)
 						Font = Enum.Font.GothamBold,
 						Name = "Content"
 					}), "Text"),
-					AddThemeObject(MakeElement("Stroke"), "Stroke"),
+					AddThemeObject(MakeElement("Stroke"), "Border"),
 					BindBox,
 					Click
 				}), "Second")
@@ -1725,8 +1846,9 @@ function unknown:MakeWindow(WindowConfig)
 				if BindConfig.Flag then				
 					unknown.Flags[BindConfig.Flag] = Bind
 				end
+				connectFrame(BindFrame, false)
 				return Bind
-			end  
+			end
 			function ElementFunction:AddTextbox(TextboxConfig)
 				TextboxConfig = TextboxConfig or {}
 				TextboxConfig.Name = TextboxConfig.Name or "Textbox"
@@ -1755,7 +1877,7 @@ function unknown:MakeWindow(WindowConfig)
 					Position = UDim2.new(1, -12, 0.5, 0),
 					AnchorPoint = Vector2.new(1, 0.5)
 				}), {
-					AddThemeObject(MakeElement("Stroke"), "Stroke"),
+					AddThemeObject(MakeElement("Stroke"), "Border"),
 					TextboxActual
 				}), "Main")
 
@@ -1770,7 +1892,7 @@ function unknown:MakeWindow(WindowConfig)
 						Font = Enum.Font.GothamBold,
 						Name = "Content"
 					}), "Text"),
-					AddThemeObject(MakeElement("Stroke"), "Stroke"),
+					AddThemeObject(MakeElement("Stroke"), "Border"),
 					TextContainer,
 					Click
 				}), "Second")
@@ -1813,6 +1935,7 @@ function unknown:MakeWindow(WindowConfig)
 				function TextboxObj:Get()
 					return TextboxActual.Text
 				end
+				connectFrame(TextboxFrame, false)
 				return TextboxObj
 			end
 			function ElementFunction:AddColorpicker(ColorpickerConfig)
@@ -1888,7 +2011,7 @@ function unknown:MakeWindow(WindowConfig)
 					Position = UDim2.new(1, -12, 0.5, 0),
 					AnchorPoint = Vector2.new(1, 0.5)
 				}), {
-					AddThemeObject(MakeElement("Stroke"), "Stroke")
+					AddThemeObject(MakeElement("Stroke"), "Border")
 				}), "Main")
 
 				local ColorpickerFrame = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", Color3.fromRGB(255, 255, 255), 0, 5), {
@@ -1916,7 +2039,7 @@ function unknown:MakeWindow(WindowConfig)
 						Name = "F"
 					}),
 					ColorpickerContainer,
-					AddThemeObject(MakeElement("Stroke"), "Stroke"),
+					AddThemeObject(MakeElement("Stroke"), "Border"),
 				}), "Second")
 
 				AddConnection(Click.MouseButton1Click, function()
@@ -1999,6 +2122,7 @@ function unknown:MakeWindow(WindowConfig)
 				if ColorpickerConfig.Flag then				
 					unknown.Flags[ColorpickerConfig.Flag] = Colorpicker
 				end
+				connectFrame(ColorpickerFrame, false)
 				return Colorpicker
 			end
 
@@ -2024,6 +2148,7 @@ function unknown:MakeWindow(WindowConfig)
 						Parent = SeparatorFrame
 					}), "Stroke")
 					function SepObj:Set(_) end
+					connectFrame(SeparatorFrame, true)
 					return SepObj
 				end
 
@@ -2072,6 +2197,7 @@ function unknown:MakeWindow(WindowConfig)
 				function SepObj:Set(text)
 					LabelObj.Text = text or ""
 				end
+				connectFrame(SeparatorFrame, true)
 				return SepObj
 			end
 
@@ -2081,46 +2207,49 @@ function unknown:MakeWindow(WindowConfig)
 				local totalSteps = #Steps
 				local currentStep = math.clamp(ProgressConfig.Default or 1, 1, math.max(totalSteps, 1))
 
-				local ProgressFrame = Create("Frame", {
-					Size = UDim2.new(1, 0, 0, 55),
-					BackgroundTransparency = 1,
+				local ProgressFrame = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", Color3.fromRGB(255,255,255), 0, 5), {
+					Size = UDim2.new(1, 0, 0, 60),
 					Parent = ItemParent
-				})
+				}), {
+					AddThemeObject(MakeElement("Stroke"), "Border")
+				}), "Second")
 
 				local NameLabel = AddThemeObject(Create("TextLabel", {
 					Text = ProgressConfig.Name or "",
 					Font = Enum.Font.GothamSemibold,
 					TextSize = 13,
-					Size = UDim2.new(1, -12, 0, 16),
-					Position = UDim2.new(0, 12, 0, 0),
+					Size = UDim2.new(1, -24, 0, 16),
+					Position = UDim2.new(0, 12, 0, 6),
 					BackgroundTransparency = 1,
 					TextXAlignment = Enum.TextXAlignment.Left,
 					Parent = ProgressFrame
 				}), "Text")
 
 				local BarBg = AddThemeObject(Create("Frame", {
-					Size = UDim2.new(1, -24, 0, 10),
-					Position = UDim2.new(0, 12, 0, 22),
+					Size = UDim2.new(1, -24, 0, 8),
+					Position = UDim2.new(0, 12, 0, 28),
 					BorderSizePixel = 0,
 					Parent = ProgressFrame
-				}), "Second")
-				Create("UICorner", {CornerRadius = UDim.new(0, 5), Parent = BarBg})
+				}), "Main")
+				Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = BarBg})
+				AddThemeObject(Create("UIStroke", {Thickness = 1, Parent = BarBg}), "Border")
 
 				local fillPct = totalSteps > 1 and ((currentStep - 1) / (totalSteps - 1)) or (currentStep >= 1 and 1 or 0)
+				local themeStroke = unknown.Themes[unknown.SelectedTheme].Stroke
 				local BarFill = Create("Frame", {
 					Size = UDim2.new(fillPct, 0, 1, 0),
-					BackgroundColor3 = Color3.fromRGB(9, 149, 98),
+					BackgroundColor3 = themeStroke,
 					BorderSizePixel = 0,
 					Parent = BarBg
 				})
-				Create("UICorner", {CornerRadius = UDim.new(0, 5), Parent = BarFill})
+				Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = BarFill})
 
 				local StepLabel = AddThemeObject(Create("TextLabel", {
 					Text = (totalSteps > 0 and Steps[currentStep]) or "",
 					Font = Enum.Font.Gotham,
 					TextSize = 11,
-					Size = UDim2.new(1, -12, 0, 13),
-					Position = UDim2.new(0, 12, 0, 38),
+					Size = UDim2.new(1, -24, 0, 12),
+					Position = UDim2.new(0, 12, 0, 42),
 					BackgroundTransparency = 1,
 					TextXAlignment = Enum.TextXAlignment.Left,
 					Parent = ProgressFrame
@@ -2138,6 +2267,7 @@ function unknown:MakeWindow(WindowConfig)
 				function ProgObj:SetName(str)
 					NameLabel.Text = str or ""
 				end
+				connectFrame(ProgressFrame, false)
 				return ProgObj
 			end
 
@@ -2234,6 +2364,31 @@ function unknown:MakeWindow(WindowConfig)
 		CloseBtn.Visible = not locked
 		MinimizeBtn.Visible = not locked
 		DragPoint.Active = not locked
+	end
+
+	-- Live window change methods
+	function TabFunction:ChangeTheme(name)
+		if unknown.Themes[name] then
+			unknown.SelectedTheme = name
+			SetTheme()
+		end
+	end
+
+	function TabFunction:SetBlur(enabled)
+		WindowConfig.Blur = enabled
+		if enabled then ApplyBlur() else RemoveBlur() end
+	end
+
+	function TabFunction:SetTransparent(enabled)
+		WindowConfig.Transparent = enabled
+		MainWindow.BackgroundTransparency = enabled and WindowConfig.TransparencyAmount or 0
+	end
+
+	function TabFunction:SetTransparencyAmount(amount)
+		WindowConfig.TransparencyAmount = math.clamp(amount, 0, 0.7)
+		if WindowConfig.Transparent then
+			MainWindow.BackgroundTransparency = WindowConfig.TransparencyAmount
+		end
 	end
 
 	-- Apply DefaultTab after all tabs loaded (defer one frame)
